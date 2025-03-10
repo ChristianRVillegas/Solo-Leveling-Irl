@@ -84,12 +84,12 @@ const Profile = () => {
   // Calculate days since started
   const daysSinceStarted = differenceInDays(new Date(), accountCreationDate);
 
-  // Prepare data for radar chart
+  // Prepare data for radar chart using lifetimePoints
   const radarData = STATS.map(stat => ({
     stat: stat.name,
-    points: stats[stat.id].points,
+    points: stats[stat.id].lifetimePoints || 0, // Use lifetimePoints instead of current points
     level: stats[stat.id].level,
-    fullMark: Math.max(...Object.values(stats).map(s => s.points)) * 1.2, // Scale for better visualization
+    fullMark: Math.max(...Object.values(stats).map(s => s.lifetimePoints || 0)) * 1.2, // Scale for better visualization
     icon: stat.icon,
     id: stat.id,
   }));
@@ -361,7 +361,7 @@ const Profile = () => {
                             {data.icon} {data.stat}
                           </p>
                           <p style={{ margin: '4px 0', color: theme.text }}>
-                            Points: <span style={{ fontWeight: 'bold' }}>{data.points}</span>
+                            Lifetime Points: <span style={{ fontWeight: 'bold' }}>{data.points}</span>
                           </p>
                           <p style={{ margin: '4px 0', color: theme.text }}>
                             Level: <span style={{ fontWeight: 'bold' }}>{data.level}</span>
@@ -384,7 +384,7 @@ const Profile = () => {
                   animationEasing="ease-out"
                 />
                 <Legend 
-                  formatter={() => 'Points Distribution'} 
+                  formatter={() => 'Lifetime Points Distribution'} 
                   wrapperStyle={{ color: theme.text, fontWeight: 'bold' }}
                   iconSize={14}
                   iconType="square"
@@ -412,7 +412,10 @@ const Profile = () => {
                   <div style={{ fontWeight: 'bold' }}>{stat.name}</div>
                   <div className="text-sm">Level {statData.level}</div>
                   <div className="text-xs mt-sm" style={{ color: theme.primary }}>
-                    {statData.points} points
+                    Current: {statData.points} points
+                  </div>
+                  <div className="text-xs" style={{ color: theme.accent }}>
+                    Lifetime: {statData.lifetimePoints || 0} points
                   </div>
                 </div>
               );

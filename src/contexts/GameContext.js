@@ -93,6 +93,7 @@ const initialState = {
     acc[stat.id] = {
       level: 1,
       points: 0,
+      lifetimePoints: 0,
       history: []
     };
     return acc;
@@ -194,6 +195,7 @@ const gameReducer = (state, action) => {
       const statState = state.stats[task.statId];
       let newPoints = statState.points + totalPoints;
       let newLevel = statState.level;
+      let newLifetimePoints = (statState.lifetimePoints || 0) + totalPoints;
       
       // Level up if enough points
       const pointsToNextLevel = getPointsToNextLevel(newLevel);
@@ -219,6 +221,7 @@ const gameReducer = (state, action) => {
             ...statState,
             points: newPoints,
             level: newLevel,
+            lifetimePoints: newLifetimePoints,
             history: [...statState.history, {
               date: today,
               points: totalPoints,
@@ -289,6 +292,52 @@ export const GameProvider = ({ children }) => {
                   console.log(`Found valid stat data for ${statId}: level ${stat.level}, points ${stat.points}`);
                 }
               });
+            }
+            
+            // Check if migration is needed for lifetimePoints
+            let needsMigration = false;
+            if (gameState.stats) {
+              Object.values(gameState.stats).forEach(stat => {
+                if (stat.lifetimePoints === undefined) {
+                  needsMigration = true;
+                }
+              });
+            }
+            
+            // Perform migration if needed
+            if (needsMigration) {
+              console.log("Migrating data to include lifetimePoints");
+              
+              // Calculate lifetime points for all stats
+              if (gameState.taskHistory && gameState.taskHistory.length > 0) {
+                Object.keys(gameState.stats).forEach(statId => {
+                  const statTasks = gameState.taskHistory.filter(task => task.statId === statId);
+                  const totalPoints = statTasks.reduce((sum, task) => sum + (task.points || 0), 0);
+                  
+                  gameState.stats[statId].lifetimePoints = totalPoints;
+                });
+              } else {
+                // If no task history, approximate based on levels
+                Object.keys(gameState.stats).forEach(statId => {
+                  const stat = gameState.stats[statId];
+                  let approximateLifetimePoints = stat.points || 0;
+                  
+                  // Add points for each level achieved
+                  for (let lvl = 1; lvl < stat.level; lvl++) {
+                    approximateLifetimePoints += getPointsToNextLevel(lvl);
+                  }
+                  
+                  gameState.stats[statId].lifetimePoints = approximateLifetimePoints;
+                });
+              }
+              
+              // Save the migrated data back to Firebase
+              try {
+                await saveGameState(currentUser.uid, gameState);
+                console.log("Migrated game state saved to Firestore");
+              } catch (error) {
+                console.error('Error saving migrated game state:', error);
+              }
             }
             
             if (hasValidData) {
