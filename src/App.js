@@ -1,4 +1,3 @@
-// In src/App.js
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from './contexts/ThemeContext';
@@ -8,6 +7,8 @@ import { TaskProvider } from './contexts/TaskContext';
 import { AnalyticsProvider } from './contexts/AnalyticsContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import FriendProvider from './contexts/FriendContext';
+import NotificationProvider from './contexts/NotificationContext';
+import ChallengeProvider from './contexts/ChallengeContext';
 
 // Import pages
 import Dashboard from './pages/Dashboard';
@@ -23,6 +24,7 @@ import Profile from './pages/Profile';
 import Login from './pages/Login';
 import Social from './pages/Social/Social';
 import FriendProfile from './pages/Social/FriendProfile';
+import Challenges from './pages/Social/Challenges';
 
 // Global styles
 import './App.css';
@@ -47,8 +49,10 @@ function App() {
             <TaskProvider>
               <AnalyticsProvider>
                 <FriendProvider>
-                  <Router>
-                  <Routes>
+                  <NotificationProvider>
+                    <ChallengeProvider>
+                      <Router>
+                      <Routes>
                     <Route path="/login" element={<Login />} />
                     <Route path="/" element={
                       <PrivateRoute>
@@ -120,8 +124,17 @@ function App() {
                         </Layout>
                       </PrivateRoute>
                     } />
-                  </Routes>
-                  </Router>
+                    <Route path="/social/challenges" element={
+                      <PrivateRoute>
+                        <Layout>
+                          <Challenges />
+                        </Layout>
+                      </PrivateRoute>
+                    } />
+                      </Routes>
+                      </Router>
+                    </ChallengeProvider>
+                  </NotificationProvider>
                 </FriendProvider>
               </AnalyticsProvider>
             </TaskProvider>

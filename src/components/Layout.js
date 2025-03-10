@@ -7,6 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 import AchievementNotification from './achievements/AchievementNotification';
 import AnimatedStreakCounter from './AnimatedStreakCounter';
 import ProfilePicture from './ProfilePicture';
+import NotificationBell from './NotificationBell';
 
 const Layout = ({ children }) => {
   const { currentUser } = useAuth();
@@ -100,6 +101,8 @@ const Layout = ({ children }) => {
           </Link>
           
           <AnimatedStreakCounter streak={streak.current} />
+          
+          <NotificationBell />
           
           <Link to="/profile" style={{ textDecoration: 'none' }}>
             <ProfilePicture
