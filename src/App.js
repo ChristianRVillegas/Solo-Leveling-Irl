@@ -6,7 +6,8 @@ import { GameProvider } from './contexts/GameContext';
 import { AchievementProvider } from './contexts/AchievementContext';
 import { TaskProvider } from './contexts/TaskContext';
 import { AnalyticsProvider } from './contexts/AnalyticsContext';
-import { AuthProvider, useAuth } from './contexts/AuthContext'; // Add this
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import FriendProvider from './contexts/FriendContext';
 
 // Import pages
 import Dashboard from './pages/Dashboard';
@@ -20,6 +21,8 @@ import EnhancedTasks from './pages/EnhancedTasks';
 import Analytics from './pages/Analytics';
 import Profile from './pages/Profile';
 import Login from './pages/Login';
+import Social from './pages/Social/Social';
+import FriendProfile from './pages/Social/FriendProfile';
 
 // Global styles
 import './App.css';
@@ -43,7 +46,8 @@ function App() {
           <AchievementProvider>
             <TaskProvider>
               <AnalyticsProvider>
-                <Router>
+                <FriendProvider>
+                  <Router>
                   <Routes>
                     <Route path="/login" element={<Login />} />
                     <Route path="/" element={
@@ -102,8 +106,23 @@ function App() {
                         </Layout>
                       </PrivateRoute>
                     } />
+                    <Route path="/social" element={
+                      <PrivateRoute>
+                        <Layout>
+                          <Social />
+                        </Layout>
+                      </PrivateRoute>
+                    } />
+                    <Route path="/social/friend/:friendId" element={
+                      <PrivateRoute>
+                        <Layout>
+                          <FriendProfile />
+                        </Layout>
+                      </PrivateRoute>
+                    } />
                   </Routes>
-                </Router>
+                  </Router>
+                </FriendProvider>
               </AnalyticsProvider>
             </TaskProvider>
           </AchievementProvider>

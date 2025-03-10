@@ -35,6 +35,7 @@ const Layout = ({ children }) => {
     { path: '/tasks', label: 'Tasks', icon: '✅' },
     { path: '/calendar', label: 'Calendar', icon: '📅' },
     { path: '/analytics', label: 'Analytics', icon: '🔍' },
+    { path: '/social', label: 'Social', icon: '👥' },
     { path: '/achievements', label: 'Achievements', icon: '🏆', badge: unreadNotifications.length > 0 },
     { path: '/settings', label: 'Settings', icon: '⚙️' }
   ];
