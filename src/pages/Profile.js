@@ -1,6 +1,7 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useGame } from '../contexts/GameContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { useAuth } from '../contexts/AuthContext';
 import { format, differenceInDays } from 'date-fns';
 import {
   RadarChart,
@@ -13,6 +14,9 @@ import {
   Legend,
 } from 'recharts';
 import ProfilePicture from '../components/ProfilePicture';
+import TitleDisplay from '../components/titles/TitleDisplay';
+import TitlesManager from '../components/titles/TitlesManager';
+import { getUserTitles } from '../utils/titles/titleService';
 
 /**
  * Profile page component that displays user information, stats visualization,
@@ -31,10 +35,51 @@ const Profile = () => {
     dispatch
   } = useGame();
   const { theme } = useTheme();
+  const { currentUser } = useAuth();
   const [selectedStatFilter, setSelectedStatFilter] = useState('all');
   const [isEditingPicture, setIsEditingPicture] = useState(false);
   const [selectedAvatar, setSelectedAvatar] = useState(profilePicture);
+  const [selectedTitle, setSelectedTitle] = useState(null);
+  const [showTitleDropdown, setShowTitleDropdown] = useState(false);
   const fileInputRef = useRef(null);
+  const titleDropdownRef = useRef(null);
+
+  // Load selected title
+  useEffect(() => {
+    const loadUserTitle = async () => {
+      if (!currentUser) return;
+      
+      try {
+        const result = await getUserTitles(currentUser.uid);
+        if (result.success) {
+          setSelectedTitle(result.selectedTitle);
+        }
+      } catch (error) {
+        console.error('Error loading user title:', error);
+      }
+    };
+    
+    loadUserTitle();
+  }, [currentUser]);
+  
+  // Handle click outside to close dropdown
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (titleDropdownRef.current && !titleDropdownRef.current.contains(event.target)) {
+        setShowTitleDropdown(false);
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  // Toggle title dropdown
+  const toggleTitleDropdown = () => {
+    setShowTitleDropdown(!showTitleDropdown);
+  };
 
   // Default avatars for users to select from
   const defaultAvatars = [
@@ -219,6 +264,54 @@ const Profile = () => {
             
             {/* Player Name */}
             <h1 className="text-3xl font-bold">{playerName}</h1>
+            
+            {/* User Title with Dropdown */}
+            <div style={{ marginTop: 'var(--spacing-md)', position: 'relative' }} ref={titleDropdownRef}>
+              {selectedTitle && (
+                <div style={{ marginBottom: 'var(--spacing-xs)' }}>
+                  <TitleDisplay
+                    titleId={selectedTitle}
+                    size="medium"
+                  />
+                </div>
+              )}
+              
+              <button
+                className="btn btn-outline btn-sm"
+                onClick={toggleTitleDropdown}
+                style={{ 
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px'
+                }}
+              >
+                {selectedTitle ? 'Change Title' : 'Select Title'}
+                <span style={{ fontSize: '0.8em' }}>▼</span>
+              </button>
+              
+              {/* Dropdown Content */}
+              {showTitleDropdown && (
+                <div style={{
+                  position: 'absolute',
+                  top: '100%',
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  width: '300px',
+                  maxWidth: '90vw',
+                  backgroundColor: theme.card,
+                  borderRadius: 'var(--border-radius-md)',
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
+                  zIndex: 10,
+                  marginTop: 'var(--spacing-sm)',
+                  border: `1px solid ${theme.border}`,
+                  paddingBottom: 'var(--spacing-md)'
+                }}>
+                  <div style={{ padding: 'var(--spacing-sm)' }}>
+                    <TitlesManager />
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Stats Grid */}
