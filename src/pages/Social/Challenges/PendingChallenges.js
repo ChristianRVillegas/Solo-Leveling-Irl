@@ -33,7 +33,8 @@ const PendingChallenges = ({ challenges }) => {
   return (
     <div className="space-y-lg">
       {challenges.map(challenge => {
-        const challengeType = CHALLENGE_TYPES[challenge.type];
+        // Find the challenge type information
+        const challengeType = Object.values(CHALLENGE_TYPES).find(type => type.id === challenge.type);
         
         // Format date
         const createdDate = challenge.createdAt?.toDate ? format(challenge.createdAt.toDate(), 'MMM d, yyyy') : 'Just now';
@@ -70,7 +71,7 @@ const PendingChallenges = ({ challenges }) => {
               </div>
             </div>
             
-            {challenge.type === CHALLENGE_TYPES.LEVEL_RACE.id && (
+            {challenge.type === 'level_race' && (
               <div className="mt-md p-sm" style={{ 
                 backgroundColor: 'rgba(255, 255, 255, 0.05)',
                 borderRadius: 'var(--border-radius-md)'
@@ -97,7 +98,7 @@ const PendingChallenges = ({ challenges }) => {
               </button>
             </div>
             
-            {challenge.type === CHALLENGE_TYPES.LEVEL_RACE.id && (
+            {challenge.type === 'level_race' && (
               <div className="flex justify-center mt-md">
                 <div className="card bg-opacity-20 p-sm text-center">
                   <div className="text-sm" style={{ opacity: 0.7 }}>Prize</div>

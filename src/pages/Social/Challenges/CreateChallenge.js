@@ -3,6 +3,9 @@ import { useTheme } from '../../../contexts/ThemeContext';
 import { useChallenge, CHALLENGE_TYPES } from '../../../contexts/ChallengeContext';
 import { useGame } from '../../../contexts/GameContext';
 import { useFriend } from '../../../contexts/FriendContext';
+import { db } from '../../../firebase/config';
+import { doc, getDoc } from 'firebase/firestore';
+import ProfilePicture from '../../../components/ProfilePicture';
 
 const CreateChallenge = ({ onCancel }) => {
   const { theme } = useTheme();
@@ -24,10 +27,47 @@ const CreateChallenge = ({ onCancel }) => {
   
   // Load friends data
   useEffect(() => {
-    if (friends && friends.length > 0) {
-      setFriendsData(friends);
-      setSelectedFriend(friends[0]?.id || '');
-    }
+    const loadFriendsData = async () => {
+      if (!friends || friends.length === 0) {
+        return;
+      }
+      
+      try {
+        const friendPromises = friends.map(async (friend) => {
+          try {
+            const userDocRef = doc(db, 'gameStates', friend.userId);
+            const userDoc = await getDoc(userDocRef);
+            
+            if (userDoc.exists()) {
+              const userData = userDoc.data();
+              
+              return {
+                id: friend.userId,
+                friendSince: friend.friendSince,
+                displayName: userData.playerName || 'Unknown User',
+                profilePicture: userData.profilePicture
+              };
+            }
+            return null;
+          } catch (error) {
+            console.error(`Error loading friend data ${friend.userId}:`, error);
+            return null;
+          }
+        });
+
+        const results = await Promise.all(friendPromises);
+        const validResults = results.filter(Boolean);
+        
+        setFriendsData(validResults);
+        if (validResults.length > 0) {
+          setSelectedFriend(validResults[0].id);
+        }
+      } catch (error) {
+        console.error('Error loading friends data:', error);
+      }
+    };
+
+    loadFriendsData();
   }, [friends]);
   
   const handleSubmit = async (e) => {
@@ -130,9 +170,9 @@ const CreateChallenge = ({ onCancel }) => {
               value={selectedFriend}
               onChange={(e) => setSelectedFriend(e.target.value)}
             >
-              <option value="">Select a friend</option>
+              <option value="" key="select-default">Select a friend</option>
               {friendsData.map(friend => (
-                <option key={friend.id} value={friend.id}>
+                <option key={`friend-option-${friend.id}`} value={friend.id}>
                   {friend.displayName || 'Friend'}
                 </option>
               ))}

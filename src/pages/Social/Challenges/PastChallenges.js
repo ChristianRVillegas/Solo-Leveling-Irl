@@ -33,7 +33,11 @@ const PastChallenges = ({ challenges }) => {
           {challenges.map(challenge => {
             const isCreator = challenge.creatorId === currentUser.uid;
             const opponent = isCreator ? challenge.recipientName : challenge.creatorName;
-            const challengeType = CHALLENGE_TYPES[challenge.type];
+            const challengeType = Object.values(CHALLENGE_TYPES).find(type => type.id === challenge.type) || {
+              name: 'Challenge',
+              description: 'Challenge description',
+              icon: '🏆'
+            };
             
             // Determine outcome
             let outcome;

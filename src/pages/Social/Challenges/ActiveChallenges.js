@@ -25,7 +25,11 @@ const ActiveChallenges = ({ challenges }) => {
         const isCreator = challenge.creatorId === currentUser.uid;
         const opponent = isCreator ? challenge.recipientName : challenge.creatorName;
         const opponentId = isCreator ? challenge.recipientId : challenge.creatorId;
-        const challengeType = CHALLENGE_TYPES[challenge.type];
+        const challengeType = Object.values(CHALLENGE_TYPES).find(type => type.id === challenge.type) || {
+          name: 'Challenge',
+          description: 'Challenge description',
+          icon: '🏆'
+        };
         
         // Format date
         const startDate = challenge.startedAt?.toDate ? format(challenge.startedAt.toDate(), 'MMM d, yyyy') : 'Just now';
@@ -39,7 +43,7 @@ const ActiveChallenges = ({ challenges }) => {
         let userLeading = false;
         let opponentLeading = false;
         
-        if (challenge.type === CHALLENGE_TYPES.STREAK_COMPETITION.id) {
+        if (challenge.type === 'streak_competition') {
           const userStreak = userProgress.streak || 0;
           const opponentStreak = opponentProgress.streak || 0;
           
@@ -62,7 +66,7 @@ const ActiveChallenges = ({ challenges }) => {
               </div>
             </div>
           );
-        } else if (challenge.type === CHALLENGE_TYPES.LEVEL_RACE.id) {
+        } else if (challenge.type === 'level_race') {
           const { statId, targetLevel } = challenge.parameters;
           const userLevel = userProgress.currentStats?.[statId] || userProgress.startStats?.[statId] || 0;
           const opponentLevel = opponentProgress.currentStats?.[statId] || opponentProgress.startStats?.[statId] || 0;
@@ -70,8 +74,8 @@ const ActiveChallenges = ({ challenges }) => {
           userLeading = userLevel > opponentLevel;
           opponentLeading = opponentLevel > userLevel;
           
-          const userProgress = (userLevel / targetLevel) * 100;
-          const opponentProgress = (opponentLevel / targetLevel) * 100;
+          const userProgressPercent = (userLevel / targetLevel) * 100;
+          const opponentProgressPercent = (opponentLevel / targetLevel) * 100;
           
           progressDisplay = (
             <div className="mt-md">
@@ -86,7 +90,7 @@ const ActiveChallenges = ({ challenges }) => {
                   <div 
                     className="progress-bar-fill" 
                     style={{ 
-                      width: `${Math.min(userProgress, 100)}%`,
+                      width: `${Math.min(userProgressPercent, 100)}%`,
                       backgroundColor: userLeading ? theme.primary : theme.secondary
                     }}
                   ></div>
@@ -104,7 +108,7 @@ const ActiveChallenges = ({ challenges }) => {
                   <div 
                     className="progress-bar-fill" 
                     style={{ 
-                      width: `${Math.min(opponentProgress, 100)}%`,
+                      width: `${Math.min(opponentProgressPercent, 100)}%`,
                       backgroundColor: opponentLeading ? theme.primary : theme.accent
                     }}
                   ></div>
@@ -112,7 +116,7 @@ const ActiveChallenges = ({ challenges }) => {
               </div>
             </div>
           );
-        } else if (challenge.type === CHALLENGE_TYPES.WEEKLY_LEADERBOARD.id) {
+        } else if (challenge.type === 'weekly_leaderboard') {
           const userPoints = userProgress.points || 0;
           const opponentPoints = opponentProgress.points || 0;
           
@@ -182,7 +186,7 @@ const ActiveChallenges = ({ challenges }) => {
             
             {progressDisplay}
             
-            {challenge.type === CHALLENGE_TYPES.LEVEL_RACE.id && (
+            {challenge.type === 'level_race' && (
               <div className="flex justify-center mt-md">
                 <div className="card bg-opacity-20 p-sm text-center">
                   <div className="text-sm" style={{ opacity: 0.7 }}>Prize</div>

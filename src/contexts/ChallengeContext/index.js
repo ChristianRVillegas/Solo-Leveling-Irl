@@ -225,7 +225,7 @@ export const ChallengeProvider = ({ children }) => {
       await sendNotification(recipientId, {
         type: 'challenge',
         title: 'New Challenge',
-        message: `${playerName} has challenged you to a ${CHALLENGE_TYPES[type].name}!`,
+        message: `${playerName} has challenged you to a ${getChallengeTypeName(type)}!`,
         challengeId: challengeRef.id
       });
       
@@ -283,7 +283,7 @@ export const ChallengeProvider = ({ children }) => {
       await sendNotification(challenge.creatorId, {
         type: 'challenge',
         title: 'Challenge Accepted',
-        message: `${playerName} has accepted your ${CHALLENGE_TYPES[challenge.type].name} challenge!`,
+        message: `${playerName} has accepted your ${getChallengeTypeName(challenge.type)} challenge!`,
         challengeId
       });
       
@@ -328,7 +328,7 @@ export const ChallengeProvider = ({ children }) => {
       await sendNotification(challenge.creatorId, {
         type: 'challenge',
         title: 'Challenge Declined',
-        message: `${playerName} has declined your ${CHALLENGE_TYPES[challenge.type].name} challenge.`,
+        message: `${playerName} has declined your ${getChallengeTypeName(challenge.type)} challenge.`,
         challengeId
       });
       
@@ -389,7 +389,7 @@ export const ChallengeProvider = ({ children }) => {
           await sendNotification(opponentId, {
             type: 'challenge_result',
             title: 'Challenge Completed',
-            message: `${playerName} has won the ${CHALLENGE_TYPES[challenge.type].name} challenge by reaching level ${progressData.level}!`,
+            message: `${playerName} has won the ${getChallengeTypeName(challenge.type)} challenge by reaching level ${progressData.level}!`,
             challengeId
           });
         }
@@ -431,7 +431,7 @@ export const ChallengeProvider = ({ children }) => {
             await sendNotification(loser, {
               type: 'challenge_result',
               title: 'Challenge Completed',
-              message: `${winnerName} has won the ${CHALLENGE_TYPES[challenge.type].name} challenge with ${winner === currentUser.uid ? userPoints : opponentPoints} points!`,
+              message: `${winnerName} has won the ${getChallengeTypeName(challenge.type)} challenge with ${winner === currentUser.uid ? userPoints : opponentPoints} points!`,
               challengeId
             });
           } else {
@@ -441,7 +441,7 @@ export const ChallengeProvider = ({ children }) => {
                 await sendNotification(participantId, {
                   type: 'challenge_result',
                   title: 'Challenge Completed',
-                  message: `The ${CHALLENGE_TYPES[challenge.type].name} challenge ended in a tie!`,
+                  message: `The ${getChallengeTypeName(challenge.type)} challenge ended in a tie!`,
                   challengeId
                 });
               }
@@ -548,6 +548,18 @@ export const ChallengeProvider = ({ children }) => {
       console.error('Error removing title:', error);
       return { success: false, error: error.message };
     }
+  };
+
+  // Helper function to get challenge type name safely
+  const getChallengeTypeName = (type) => {
+    // Find the challenge type by ID
+    for (const key in CHALLENGE_TYPES) {
+      if (CHALLENGE_TYPES[key].id === type) {
+        return CHALLENGE_TYPES[key].name;
+      }
+    }
+    // Fallback
+    return 'Challenge';
   };
 
   // Context value
