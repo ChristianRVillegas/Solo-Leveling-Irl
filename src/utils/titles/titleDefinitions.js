@@ -58,6 +58,15 @@ export const TITLES = [
     icon: '💪'
   },
   {
+    id: 'nimble',
+    name: 'The Nimble',
+    description: 'Reached level 25 in Agility',
+    category: TITLE_CATEGORIES.STAT_BASED,
+    rarity: TITLE_RARITIES.UNCOMMON,
+    requirements: { stat: 'agility', level: 25 },
+    icon: '🤸'
+  },
+  {
     id: 'genius',
     name: 'The Genius',
     description: 'Reached level 25 in Intelligence',
@@ -112,6 +121,15 @@ export const TITLES = [
     rarity: TITLE_RARITIES.RARE,
     requirements: { stat: 'strength', level: 50 },
     icon: '💪'
+  },
+  {
+    id: 'acrobat',
+    name: 'Master Acrobat',
+    description: 'Reached level 50 in Agility',
+    category: TITLE_CATEGORIES.STAT_BASED,
+    rarity: TITLE_RARITIES.RARE,
+    requirements: { stat: 'agility', level: 50 },
+    icon: '🤸'
   },
   {
     id: 'archmage',
@@ -223,6 +241,36 @@ export const TITLES = [
     },
     icon: '🛡️'
   },
+  {
+    id: 'rogue',
+    name: 'Rogue',
+    description: 'Reached level 20 in both Agility and Concentration',
+    category: TITLE_CATEGORIES.STAT_BASED,
+    rarity: TITLE_RARITIES.UNCOMMON,
+    requirements: { 
+      multistat: true,
+      stats: [
+        { stat: 'agility', level: 20 },
+        { stat: 'concentration', level: 20 }
+      ]
+    },
+    icon: '🔪'
+  },
+  {
+    id: 'dancer',
+    name: 'Dancer',
+    description: 'Reached level 20 in both Agility and Stamina',
+    category: TITLE_CATEGORIES.STAT_BASED,
+    rarity: TITLE_RARITIES.UNCOMMON,
+    requirements: { 
+      multistat: true,
+      stats: [
+        { stat: 'agility', level: 20 },
+        { stat: 'stamina', level: 20 }
+      ]
+    },
+    icon: '💃'
+  },
   
   // Advanced class titles (higher requirements)
   {
@@ -254,6 +302,21 @@ export const TITLES = [
       ]
     },
     icon: '🧙'
+  },
+  {
+    id: 'shadow_dancer',
+    name: 'Shadow Dancer',
+    description: 'Reached level 40 in both Agility and Concentration',
+    category: TITLE_CATEGORIES.STAT_BASED,
+    rarity: TITLE_RARITIES.RARE,
+    requirements: { 
+      multistat: true,
+      stats: [
+        { stat: 'agility', level: 40 },
+        { stat: 'concentration', level: 40 }
+      ]
+    },
+    icon: '👥'
   },
   
   // Achievement-based titles

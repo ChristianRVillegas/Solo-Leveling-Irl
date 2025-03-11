@@ -147,6 +147,40 @@ const DEFAULT_TEMPLATES = [
     isTemplate: true
   },
   
+  // Agility templates
+  {
+    id: 'template-agility-1',
+    name: 'Basic stretching routine',
+    statId: 'agility',
+    type: 'simple',
+    category: 'recommended',
+    isTemplate: true
+  },
+  {
+    id: 'template-agility-2',
+    name: 'Yoga session',
+    statId: 'agility',
+    type: 'regular',
+    category: 'recommended',
+    isTemplate: true
+  },
+  {
+    id: 'template-agility-3',
+    name: 'Balance practice',
+    statId: 'agility',
+    type: 'regular',
+    category: 'recommended',
+    isTemplate: true
+  },
+  {
+    id: 'template-agility-4',
+    name: 'Full mobility workout',
+    statId: 'agility',
+    type: 'challenge',
+    category: 'recommended',
+    isTemplate: true
+  },
+  
   // Intelligence templates
   {
     id: 'template-intelligence-1',
