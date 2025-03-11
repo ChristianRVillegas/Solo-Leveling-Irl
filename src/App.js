@@ -1,4 +1,3 @@
-// In src/App.js
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from './contexts/ThemeContext';
@@ -6,7 +5,10 @@ import { GameProvider } from './contexts/GameContext';
 import { AchievementProvider } from './contexts/AchievementContext';
 import { TaskProvider } from './contexts/TaskContext';
 import { AnalyticsProvider } from './contexts/AnalyticsContext';
-import { AuthProvider, useAuth } from './contexts/AuthContext'; // Add this
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import FriendProvider from './contexts/FriendContext';
+import NotificationProvider from './contexts/NotificationContext';
+import ChallengeProvider from './contexts/ChallengeContext';
 
 // Import pages
 import Dashboard from './pages/Dashboard';
@@ -20,6 +22,9 @@ import EnhancedTasks from './pages/EnhancedTasks';
 import Analytics from './pages/Analytics';
 import Profile from './pages/Profile';
 import Login from './pages/Login';
+import Social from './pages/Social/Social';
+import FriendProfile from './pages/Social/FriendProfile';
+import Challenges from './pages/Social/Challenges';
 
 // Global styles
 import './App.css';
@@ -43,8 +48,11 @@ function App() {
           <AchievementProvider>
             <TaskProvider>
               <AnalyticsProvider>
-                <Router>
-                  <Routes>
+                <FriendProvider>
+                  <NotificationProvider>
+                    <ChallengeProvider>
+                      <Router>
+                      <Routes>
                     <Route path="/login" element={<Login />} />
                     <Route path="/" element={
                       <PrivateRoute>
@@ -102,8 +110,32 @@ function App() {
                         </Layout>
                       </PrivateRoute>
                     } />
-                  </Routes>
-                </Router>
+                    <Route path="/social" element={
+                      <PrivateRoute>
+                        <Layout>
+                          <Social />
+                        </Layout>
+                      </PrivateRoute>
+                    } />
+                    <Route path="/social/friend/:friendId" element={
+                      <PrivateRoute>
+                        <Layout>
+                          <FriendProfile />
+                        </Layout>
+                      </PrivateRoute>
+                    } />
+                    <Route path="/social/challenges" element={
+                      <PrivateRoute>
+                        <Layout>
+                          <Challenges />
+                        </Layout>
+                      </PrivateRoute>
+                    } />
+                      </Routes>
+                      </Router>
+                    </ChallengeProvider>
+                  </NotificationProvider>
+                </FriendProvider>
               </AnalyticsProvider>
             </TaskProvider>
           </AchievementProvider>

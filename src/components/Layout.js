@@ -7,6 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 import AchievementNotification from './achievements/AchievementNotification';
 import AnimatedStreakCounter from './AnimatedStreakCounter';
 import ProfilePicture from './ProfilePicture';
+import NotificationBell from './NotificationBell';
 
 const Layout = ({ children }) => {
   const { currentUser } = useAuth();
@@ -35,6 +36,7 @@ const Layout = ({ children }) => {
     { path: '/tasks', label: 'Tasks', icon: '✅' },
     { path: '/calendar', label: 'Calendar', icon: '📅' },
     { path: '/analytics', label: 'Analytics', icon: '🔍' },
+    { path: '/social', label: 'Social', icon: '👥' },
     { path: '/achievements', label: 'Achievements', icon: '🏆', badge: unreadNotifications.length > 0 },
     { path: '/settings', label: 'Settings', icon: '⚙️' }
   ];
@@ -99,6 +101,8 @@ const Layout = ({ children }) => {
           </Link>
           
           <AnimatedStreakCounter streak={streak.current} />
+          
+          <NotificationBell />
           
           <Link to="/profile" style={{ textDecoration: 'none' }}>
             <ProfilePicture
