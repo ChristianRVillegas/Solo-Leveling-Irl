@@ -17,6 +17,7 @@ import ProfilePicture from '../components/ProfilePicture';
 import TitleDisplay from '../components/titles/TitleDisplay';
 import TitlesManager from '../components/titles/TitlesManager';
 import { getUserTitles } from '../utils/titles/titleService';
+import { uploadProfilePicture, testStorageConnection } from '../services/storageService';
 
 /**
  * Profile page component that displays user information, stats visualization,
@@ -41,8 +42,27 @@ const Profile = () => {
   const [selectedAvatar, setSelectedAvatar] = useState(profilePicture);
   const [selectedTitle, setSelectedTitle] = useState(null);
   const [showTitleDropdown, setShowTitleDropdown] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState(null);
   const fileInputRef = useRef(null);
   const titleDropdownRef = useRef(null);
+
+  // Initialize selectedAvatar when profilePicture changes or from Auth
+  useEffect(() => {
+    // First check if there's a profile picture in the game state
+    if (profilePicture) {
+      setSelectedAvatar(profilePicture);
+    } 
+    // Otherwise, check if there's a photoURL in the Auth user profile
+    else if (currentUser && currentUser.photoURL) {
+      setSelectedAvatar(currentUser.photoURL);
+      // Update the Redux state as well
+      dispatch({
+        type: 'SET_PROFILE_PICTURE',
+        payload: currentUser.photoURL
+      });
+    }
+  }, [profilePicture, currentUser]);
 
   // Load selected title
   useEffect(() => {
@@ -94,28 +114,90 @@ const Profile = () => {
 
   // Handle custom image upload
   const handleImageUpload = (event) => {
+    setUploadError(null);
     const file = event.target.files[0];
     if (!file) return;
+
+    // Check file size (limit to 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setUploadError("Image is too large. Please select an image under 5MB.");
+      return;
+    }
 
     const reader = new FileReader();
     reader.onloadend = () => {
       setSelectedAvatar(reader.result);
     };
+    reader.onerror = () => {
+      setUploadError("Failed to read the selected file. Please try again.");
+    };
     reader.readAsDataURL(file);
   };
 
   // Save the selected profile picture
-  const handleSaveProfilePicture = () => {
-    dispatch({
-      type: 'SET_PROFILE_PICTURE',
-      payload: selectedAvatar
-    });
-    setIsEditingPicture(false);
+  const handleSaveProfilePicture = async () => {
+    console.log("Save profile picture clicked");
+    console.log("Current user:", currentUser);
+    console.log("Selected avatar type:", typeof selectedAvatar);
+    setUploadError(null);
+    
+    try {
+      // Only upload custom images, not default avatars
+      if (selectedAvatar && !defaultAvatars.includes(selectedAvatar)) {
+        // Show loading indicator
+        setIsUploading(true);
+        
+        console.log("Uploading custom image");
+        // Upload to Firebase Storage and get URL
+        const imageUrl = await uploadProfilePicture(selectedAvatar);
+        console.log("Got image URL:", imageUrl);
+        
+        // Save URL to game state
+        dispatch({
+          type: 'SET_PROFILE_PICTURE',
+          payload: imageUrl
+        });
+        console.log("Dispatched SET_PROFILE_PICTURE action");
+      } else {
+        // For default avatars, just save directly
+        console.log("Saving default avatar:", selectedAvatar);
+        dispatch({
+          type: 'SET_PROFILE_PICTURE',
+          payload: selectedAvatar
+        });
+        console.log("Dispatched SET_PROFILE_PICTURE for default avatar");
+      }
+      
+      setIsEditingPicture(false);
+    } catch (error) {
+      console.error("Failed to save profile picture:", error);
+      // Show error message to user
+      setUploadError(error.message || "Failed to save profile picture. Please try again.");
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   // Trigger file input click
   const handleUploadClick = () => {
     fileInputRef.current.click();
+  };
+
+  // Debug function to test storage
+  const testStorage = async () => {
+    try {
+      setIsUploading(true);
+      setUploadError(null);
+      const result = await testStorageConnection();
+      console.log(result);
+      alert('Storage connection test: ' + result);
+    } catch (error) {
+      console.error('Storage test failed:', error);
+      setUploadError(error.message);
+      alert('Storage test failed: ' + error.message);
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   // Calculate account creation date from the first completed task
@@ -183,7 +265,10 @@ const Profile = () => {
                     {defaultAvatars.map((avatar, index) => (
                       <div
                         key={index}
-                        onClick={() => setSelectedAvatar(avatar)}
+                        onClick={() => {
+                          setSelectedAvatar(avatar);
+                          setUploadError(null);
+                        }}
                         style={{
                           border: selectedAvatar === avatar ? `2px solid ${theme.primary}` : '2px solid transparent',
                           borderRadius: '50%',
@@ -211,8 +296,17 @@ const Profile = () => {
                       className="btn btn-outline"
                       onClick={handleUploadClick}
                       style={{ width: '100%' }}
+                      disabled={isUploading}
                     >
                       Upload Image
+                    </button>
+                    <button
+                      className="btn btn-outline"
+                      onClick={testStorage}
+                      style={{ width: '100%', backgroundColor: 'rgba(255, 0, 0, 0.1)' }}
+                      disabled={isUploading}
+                    >
+                      Test Storage (Debug)
                     </button>
                     <input
                       type="file"
@@ -226,19 +320,45 @@ const Profile = () => {
                         className="btn btn-primary"
                         onClick={handleSaveProfilePicture}
                         style={{ flex: 1 }}
+                        disabled={isUploading}
                       >
-                        Save
+                        {isUploading ? 'Uploading...' : 'Save'}
                       </button>
                       <button
                         className="btn btn-outline"
                         onClick={() => {
                           setIsEditingPicture(false);
                           setSelectedAvatar(profilePicture);
+                          setUploadError(null);
                         }}
                         style={{ flex: 1 }}
+                        disabled={isUploading}
                       >
                         Cancel
                       </button>
+                    </div>
+                    {isUploading && (
+                      <div style={{ textAlign: 'center', marginTop: 'var(--spacing-xs)' }}>
+                        <small style={{ opacity: 0.7 }}>Please wait while your image uploads...</small>
+                      </div>
+                    )}
+                    {uploadError && (
+                      <div style={{ 
+                        textAlign: 'center', 
+                        marginTop: 'var(--spacing-xs)', 
+                        color: '#e53935',
+                        backgroundColor: 'rgba(229, 57, 53, 0.1)',
+                        padding: '8px',
+                        borderRadius: '4px'
+                      }}>
+                        <small>{uploadError}</small>
+                      </div>
+                    )}
+                    <div style={{ textAlign: 'center', marginTop: 'var(--spacing-xs)' }}>
+                      <small style={{ opacity: 0.7 }}>Current profile URL: {profilePicture || "None"}</small>
+                    </div>
+                    <div style={{ textAlign: 'center' }}>
+                      <small style={{ opacity: 0.7 }}>Auth status: {currentUser ? "Logged in" : "Not logged in"}</small>
                     </div>
                   </div>
                 </div>

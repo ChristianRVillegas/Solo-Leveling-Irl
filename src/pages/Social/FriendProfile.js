@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useGame } from '../../contexts/GameContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { useFriend } from '../../contexts/FriendContext';
 import { db } from '../../firebase/config';
 import { doc, getDoc } from 'firebase/firestore';
 import { format } from 'date-fns';
@@ -33,18 +34,22 @@ const FriendProfile = () => {
     getOverallRank: getCurrentUserRank,
     playerName: currentPlayerName
   } = useGame();
+  const { sendFriendRequest, friends, sentRequests } = useFriend();
   
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [friendData, setFriendData] = useState(null);
   const [showComparison, setShowComparison] = useState(false);
   const [recentActivity, setRecentActivity] = useState([]);
+  const [isFriend, setIsFriend] = useState(false);
+  const [requestSent, setRequestSent] = useState(false);
+  const [sending, setSending] = useState(false);
   
   // Fetch friend's data
   useEffect(() => {
     const fetchFriendData = async () => {
       if (!friendId) {
-        setError('Friend ID is missing');
+        setError('User ID is missing');
         setLoading(false);
         return;
       }
@@ -52,12 +57,23 @@ const FriendProfile = () => {
       try {
         setLoading(true);
         
-        // Get friend's game state
+        // Check if this is a friend or has pending request
+        if (friends && friends.length > 0) {
+          const isFriendFound = friends.some(f => f.userId === friendId);
+          setIsFriend(isFriendFound);
+        }
+        
+        if (sentRequests && sentRequests.length > 0) {
+          const isRequestSent = sentRequests.some(r => r.id === friendId);
+          setRequestSent(isRequestSent);
+        }
+        
+        // Get user's game state
         const gameStateDocRef = doc(db, 'gameStates', friendId);
         const gameStateDoc = await getDoc(gameStateDocRef);
         
         if (!gameStateDoc.exists()) {
-          setError('Friend data not found');
+          setError('User data not found');
           setLoading(false);
           return;
         }
@@ -75,14 +91,14 @@ const FriendProfile = () => {
         setFriendData(friendGameState);
         setLoading(false);
       } catch (error) {
-        console.error('Error fetching friend data:', error);
-        setError('Failed to load friend data');
+        console.error('Error fetching user data:', error);
+        setError('Failed to load user data');
         setLoading(false);
       }
     };
     
     fetchFriendData();
-  }, [friendId]);
+  }, [friendId, friends, sentRequests]);
   
   // Calculate overall level
   const getOverallLevel = (stats) => {
@@ -114,6 +130,24 @@ const FriendProfile = () => {
     }
     
     return RANKS[0].name;
+  };
+  
+  // Handle sending friend request
+  const handleSendFriendRequest = async () => {
+    if (requestSent || isFriend || !currentUser) return;
+    
+    try {
+      setSending(true);
+      const success = await sendFriendRequest(friendId);
+      
+      if (success) {
+        setRequestSent(true);
+      }
+    } catch (error) {
+      console.error('Error sending friend request:', error);
+    } finally {
+      setSending(false);
+    }
   };
   
   // Prepare data for radar chart
@@ -189,14 +223,19 @@ const FriendProfile = () => {
   return (
     <div className="animate-fade-in">
       {/* Back button */}
-      <div className="mb-md">
-        <button 
-          className="btn btn-outline"
-          onClick={() => navigate('/social')}
-          style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-xs)' }}
-        >
-          ← Back to Friends
-        </button>
+      <div className="flex justify-between items-center mb-md">
+        <div>
+          <button 
+            className="btn btn-outline"
+            onClick={() => navigate('/social')}
+            style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-xs)' }}
+          >
+            ← Back to Social
+          </button>
+        </div>
+        <h2 className="text-2xl">
+          {isFriend ? 'Friend Profile' : 'User Profile'}
+        </h2>
       </div>
     
       {/* Profile Header */}
@@ -218,6 +257,37 @@ const FriendProfile = () => {
             {/* Player Name */}
             <h1 className="text-3xl font-bold">{friendData.playerName}</h1>
             <p className="text-lg">Level {friendLevel} {friendRank}</p>
+            
+            {/* Friend Status/Action */}
+            {currentUser && currentUser.uid !== friendId && (
+              <div style={{ marginTop: 'var(--spacing-md)' }}>
+                {isFriend ? (
+                  <div className="inline-flex items-center px-md py-sm rounded-full" style={{ 
+                    backgroundColor: 'rgba(76, 175, 80, 0.1)', 
+                    color: '#4CAF50',
+                    border: '1px solid #4CAF50'
+                  }}>
+                    <span className="mr-xs">✓</span> Friends
+                  </div>
+                ) : requestSent ? (
+                  <div className="inline-flex items-center px-md py-sm rounded-full" style={{ 
+                    backgroundColor: 'rgba(255, 255, 255, 0.1)', 
+                    color: theme.text,
+                    border: '1px solid ' + theme.border
+                  }}>
+                    <span className="mr-xs">✉️</span> Friend Request Sent
+                  </div>
+                ) : (
+                  <button 
+                    className="btn btn-primary"
+                    onClick={handleSendFriendRequest}
+                    disabled={sending}
+                  >
+                    {sending ? 'Sending...' : 'Add Friend'}
+                  </button>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Stats Grid */}

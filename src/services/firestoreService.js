@@ -43,6 +43,28 @@ import {
     }
   };
   
+  export const updateUserProfile = async (uid, updatedData) => {
+    try {
+      const docRef = doc(db, 'users', uid);
+      const docSnap = await getDoc(docRef);
+      
+      if (docSnap.exists()) {
+        // Update existing profile
+        await updateDoc(docRef, {
+          ...updatedData,
+          updatedAt: new Date()
+        });
+      } else {
+        // Create profile if it doesn't exist
+        await createUserProfile(uid, updatedData);
+      }
+      return true;
+    } catch (error) {
+      console.error('Error updating user profile:', error);
+      throw error;
+    }
+  };
+  
   // Game state management
   export const saveGameState = async (uid, gameState) => {
     try {

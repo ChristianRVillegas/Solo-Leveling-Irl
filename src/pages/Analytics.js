@@ -5,12 +5,14 @@ import ProgressReports from '../components/analytics/ProgressReports';
 import InsightsComponent from '../components/analytics/InsightsComponent';
 import GoalsTracking from '../components/analytics/GoalsTracking';
 import BasicStatGrid from '../components/analytics/BasicStatGrid';
+import { useTheme } from '../contexts/ThemeContext';
 import { 
   RiLayoutLine, 
   RiBarChartLine, 
   RiGitMergeLine, 
   RiLineChartLine, 
-  RiLineLine 
+  RiLineLine,
+  RiDashboardLine
 } from 'react-icons/ri';
 
 /**
@@ -22,10 +24,11 @@ import {
 const Analytics = () => {
   // State for active tab/section
   const [activeTab, setActiveTab] = useState('dashboard');
+  const { theme } = useTheme();
   
   // Define tabs/sections with React Icons
   const tabs = [
-    { id: 'dashboard', label: 'Dashboard', icon: RiLayoutLine },
+    { id: 'dashboard', label: 'Dashboard', icon: RiDashboardLine },
     { id: 'activity', label: 'Activity Patterns', icon: RiBarChartLine },
     { id: 'correlations', label: 'Stat Correlations', icon: RiGitMergeLine },
     { id: 'progress', label: 'Progress Reports', icon: RiLineChartLine },
@@ -37,15 +40,14 @@ const Analytics = () => {
     switch (activeTab) {
       case 'dashboard':
         return (
-          <div className="space-y-6">
+          <div className="space-y-6 animate-fade-in">
             <InsightsComponent />
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <ActivityPatterns />
               <ProgressReports />
             </div>
-            {/* Added BasicStatGrid in a card container */}
-            <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-4 mb-6 border border-gray-100 dark:border-gray-800">
-              <BasicStatGrid />
+            <div className="card">
+              <BasicStatGridWrapper />
             </div>
             <GoalsTracking />
           </div>
@@ -62,26 +64,45 @@ const Analytics = () => {
         return null;
     }
   };
+
+  // Wrapper for BasicStatGrid that handles styling
+  const BasicStatGridWrapper = () => {
+    return (
+      <div>
+        <h3 className="text-xl font-semibold mb-4 flex items-center">
+          <RiBarChartLine className="mr-2 h-5 w-5" />
+          Stat Activity Heatmap
+        </h3>
+        <BasicStatGrid />
+      </div>
+    );
+  };
   
   return (
-    <div className="container mx-auto px-4 py-6">
-      <h1 className="text-3xl font-bold mb-6 dark:text-white">Analytics & Insights</h1>
+    <div className="animate-fade-in">
+      <div className="flex justify-between items-center mb-lg">
+        <h2 className="text-2xl">Analytics & Insights</h2>
+      </div>
       
       {/* Tab navigation */}
-      <div className="mb-6 border-b dark:border-gray-700">
-        <nav className="flex space-x-1 md:space-x-4 overflow-x-auto pb-2">
+      <div className="mb-lg" style={{ borderBottom: `1px solid ${theme.border}` }}>
+        <div className="flex space-x-2 overflow-x-auto pb-2">
           {tabs.map(tab => {
             const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            
             return (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center px-3 py-2 text-sm font-medium rounded-t-lg transition-all duration-200 ${
-                  activeTab === tab.id
-                    ? 'bg-indigo-600 text-white'
-                    : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800'
-                }`}
-                aria-selected={activeTab === tab.id}
+                className={`flex items-center px-md py-sm rounded-t-lg transition-all duration-200 ${isActive ? 'font-bold' : ''}`}
+                style={{
+                  color: isActive ? theme.primary : theme.text,
+                  borderBottom: isActive ? `2px solid ${theme.primary}` : 'none',
+                  backgroundColor: isActive ? 'rgba(255, 255, 255, 0.05)' : 'transparent',
+                  marginBottom: '-1px'
+                }}
+                aria-selected={isActive}
                 role="tab"
               >
                 <Icon className="mr-2 h-5 w-5" />
@@ -89,7 +110,7 @@ const Analytics = () => {
               </button>
             );
           })}
-        </nav>
+        </div>
       </div>
       
       {/* Content area */}

@@ -4,6 +4,7 @@ import {
   ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell, Legend
 } from 'recharts';
 import { useAnalyticsContext } from '../../contexts/AnalyticsContext';
+import { useTheme } from '../../contexts/ThemeContext';
 import { 
   RiCalendarLine, 
   RiTimeLine, 
@@ -11,7 +12,6 @@ import {
   RiBarChartLine,
   RiLineChartLine
 } from 'react-icons/ri';
-import ColorTheme from '../../styles/ColorTheme';
 
 /**
  * ActivityPatterns Component
@@ -24,14 +24,15 @@ import ColorTheme from '../../styles/ColorTheme';
  */
 const ActivityPatterns = ({ showTitle = false }) => {
   const { activityPatterns } = useAnalyticsContext();
+  const { theme } = useTheme();
   const [view, setView] = useState('day'); // 'day', 'hour', 'week', 'month'
   
-  // Colors for the charts from our color theme
+  // Colors for the charts from our theme
   const colors = {
-    primary: ColorTheme.primary, 
-    secondary: ColorTheme.secondary,
-    tertiary: ColorTheme.info,
-    accent: ColorTheme.warning,
+    primary: theme.primary, 
+    secondary: theme.accent,
+    tertiary: theme.info,
+    accent: theme.warning,
   };
   
   // Animation configuration for charts
@@ -160,7 +161,7 @@ const ActivityPatterns = ({ showTitle = false }) => {
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       return (
-        <div className="bg-white p-3 shadow-lg rounded-lg border border-gray-200">
+        <div style={{ backgroundColor: theme.card, padding: '12px', borderRadius: '8px', border: `1px solid ${theme.border}`, boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)' }}>
           <p className="font-medium">{label}</p>
           <p className="text-sm mt-1">
             <span className="font-medium">Tasks Completed:</span> {payload[0].value}
@@ -176,13 +177,13 @@ const ActivityPatterns = ({ showTitle = false }) => {
     const data = getChartData();
     
     if (!data || data.length === 0) {
-      return (
-        <div className="p-10 text-center text-gray-500">
-          <RiInformationLine className="mx-auto mb-2 h-10 w-10" />
-          <p>Not enough activity data available yet.</p>
-          <p className="text-sm mt-2">Complete more tasks to see your patterns!</p>
-        </div>
-      );
+    return (
+    <div className="p-10 text-center">
+    <RiInformationLine className="mx-auto mb-2 h-10 w-10 opacity-50" />
+    <p>Not enough activity data available yet.</p>
+    <p className="text-sm mt-2">Complete more tasks to see your patterns!</p>
+    </div>
+    );
     }
     
     // For day and hour views, show a bar chart
@@ -190,22 +191,22 @@ const ActivityPatterns = ({ showTitle = false }) => {
       return (
         <ResponsiveContainer width="100%" height={300}>
           <BarChart data={data} margin={{ top: 20, right: 30, left: 0, bottom: 5 }} {...animationConfig}>
-            <CartesianGrid strokeDasharray="3 3" stroke={ColorTheme.chart.gridLines} />
+            <CartesianGrid strokeDasharray="3 3" stroke={theme.border} opacity={0.5} />
             <XAxis 
               dataKey="name" 
-              tick={{ fill: '#4b5563' }} 
-              tickLine={{ stroke: '#6b7280' }}
+              tick={{ fill: theme.text }} 
+              tickLine={{ stroke: theme.border }}
             />
             <YAxis
-              tick={{ fill: '#4b5563' }} 
-              tickLine={{ stroke: '#6b7280' }}
+              tick={{ fill: theme.text }} 
+              tickLine={{ stroke: theme.border }}
               allowDecimals={false}
             />
             <Tooltip content={<CustomTooltip />} />
             <Bar 
               dataKey="tasks" 
               name="Completed Tasks" 
-              fill={colors.primary} 
+              fill={theme.primary} 
               radius={[4, 4, 0, 0]}  // Rounded bar tops
               barSize={view === 'hour' ? 15 : 30}  // Thinner bars for hourly view
             />
@@ -218,15 +219,15 @@ const ActivityPatterns = ({ showTitle = false }) => {
     return (
       <ResponsiveContainer width="100%" height={300}>
         <LineChart data={data} margin={{ top: 20, right: 30, left: 0, bottom: 5 }} {...animationConfig}>
-          <CartesianGrid strokeDasharray="3 3" stroke={ColorTheme.chart.gridLines} />
+          <CartesianGrid strokeDasharray="3 3" stroke={theme.border} opacity={0.5} />
           <XAxis 
             dataKey="name" 
-            tick={{ fill: '#4b5563' }} 
-            tickLine={{ stroke: '#6b7280' }}
+            tick={{ fill: theme.text }} 
+            tickLine={{ stroke: theme.border }}
           />
           <YAxis 
-            tick={{ fill: '#4b5563' }} 
-            tickLine={{ stroke: '#6b7280' }}
+            tick={{ fill: theme.text }} 
+            tickLine={{ stroke: theme.border }}
             allowDecimals={false}
           />
           <Tooltip 
@@ -237,10 +238,10 @@ const ActivityPatterns = ({ showTitle = false }) => {
             type="monotone" 
             dataKey="tasks" 
             name="Completed Tasks" 
-            stroke={colors.tertiary} 
+            stroke={theme.primary} 
             strokeWidth={3} 
-            dot={{ r: 6, fill: colors.tertiary, strokeWidth: 1, stroke: '#fff' }}
-            activeDot={{ r: 8, fill: colors.tertiary, strokeWidth: 2, stroke: '#fff' }} 
+            dot={{ r: 6, fill: theme.primary, strokeWidth: 1, stroke: theme.card }}
+            activeDot={{ r: 8, fill: theme.primary, strokeWidth: 2, stroke: theme.card }} 
           />
         </LineChart>
       </ResponsiveContainer>
@@ -258,9 +259,9 @@ const ActivityPatterns = ({ showTitle = false }) => {
     const COLORS = [colors.primary, colors.tertiary];
     
     return (
-      <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-4 mt-4 transition-all duration-300 hover:shadow-md">
+      <div className="card p-4 mt-4 transition-all duration-300">
         <h3 className="text-lg font-semibold mb-2 flex items-center">
-          <RiBarChartLine className="mr-2 h-5 w-5 text-gray-600" />
+          <RiBarChartLine className="mr-2 h-5 w-5" style={{ color: theme.primary }} />
           Most Active
         </h3>
         
@@ -292,12 +293,11 @@ const ActivityPatterns = ({ showTitle = false }) => {
                 </Pie>
                 <Tooltip 
                   formatter={(value, name, props) => [value, `Most Active ${props.payload.name}`]} 
-                  itemStyle={{ color: '#4b5563' }}
                   contentStyle={{ 
-                    backgroundColor: 'white', 
+                    backgroundColor: theme.card, 
                     borderRadius: '0.375rem',
                     boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
-                    border: '1px solid #e5e7eb'
+                    border: `1px solid ${theme.border}`
                   }}
                 />
               </PieChart>
@@ -318,7 +318,7 @@ const ActivityPatterns = ({ showTitle = false }) => {
                       Most Active {item.name}:
                     </div>
                     <div className="ml-5 text-lg font-bold">{item.label}</div>
-                    <div className="ml-5 text-sm text-gray-600">
+                    <div className="ml-5 text-sm opacity-70">
                       {item.value} tasks completed
                     </div>
                   </div>
@@ -334,11 +334,11 @@ const ActivityPatterns = ({ showTitle = false }) => {
   // Button for view toggling with active state
   const ViewToggleButton = ({ viewName, label, icon: Icon, active }) => (
     <button
-      className={`px-3 py-1 rounded text-sm flex items-center transition-all duration-200 ${
-        active 
-          ? `bg-${ColorTheme.primary} text-white shadow-sm` 
-          : 'bg-gray-200 hover:bg-gray-300'
-      }`}
+      className={`px-3 py-1 rounded text-sm flex items-center transition-all duration-200 ${active ? 'font-bold' : ''}`}
+      style={{
+        backgroundColor: active ? `${theme.primary}20` : 'rgba(255, 255, 255, 0.05)',
+        color: active ? theme.primary : theme.text,
+      }}
       onClick={() => setView(viewName)}
       aria-pressed={active}
     >
@@ -348,12 +348,12 @@ const ActivityPatterns = ({ showTitle = false }) => {
   );
   
   return (
-    <div className="bg-white rounded-lg shadow p-4 mb-6 border border-gray-100 transition-all duration-300 hover:shadow-md">
+    <div className="card mb-6 transition-all duration-300">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-semibold flex items-center">
-          <RiBarChartLine className="mr-2 h-6 w-6 text-gray-700" />
+          <RiBarChartLine className="mr-2 h-6 w-6" style={{ color: theme.primary }} />
           Activity Patterns
-          {!showTitle && <span className="ml-2 text-xs text-gray-500 font-normal">When you're most productive</span>}
+          {!showTitle && <span className="ml-2 text-xs opacity-70 font-normal">When you're most productive</span>}
         </h2>
         
         <div className="flex space-x-2">
@@ -387,9 +387,9 @@ const ActivityPatterns = ({ showTitle = false }) => {
       {renderChart()}
       {renderMostActivePie()}
       
-      <div className="mt-4 text-sm text-gray-600 bg-blue-50 p-3 rounded-lg border border-blue-100">
+      <div className="mt-4 text-sm p-3 rounded-lg card" style={{ backgroundColor: `${theme.primary}10` }}>
         <div className="flex items-start">
-          <RiInformationLine className="h-5 w-5 mr-2 text-blue-500 mt-0.5" />
+          <RiInformationLine className="h-5 w-5 mr-2 mt-0.5" style={{ color: theme.primary }} />
           <div>
             <p>This chart shows when you're most active based on your completed tasks.</p>
             <p className="mt-1">Use these insights to schedule tasks during your naturally productive times.</p>

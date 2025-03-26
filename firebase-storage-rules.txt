@@ -1,0 +1,33 @@
+// Copy these rules to your Firebase Storage rules in the Firebase Console
+// IMPORTANT: These are debug rules that allow all authenticated access
+// Once confirmed working, use the more restrictive rules below
+
+// DEBUG RULES - Less restrictive for testing
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Allow all authenticated users to read and write during testing
+    match /{allPaths=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}
+
+// PRODUCTION RULES - More restrictive for production use
+// Uncomment these and replace the above once everything is working
+/*
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /profilePictures/{userId}/{allImages=**} {
+      // Allow read access to profile pictures for all users
+      allow read: if request.auth != null;
+      // Allow uploads only for own profile
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+    match /test-connection/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}
+*/

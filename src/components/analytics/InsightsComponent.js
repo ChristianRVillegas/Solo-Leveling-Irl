@@ -1,5 +1,6 @@
 import React from 'react';
 import { useAnalyticsContext } from '../../contexts/AnalyticsContext';
+import { useTheme } from '../../contexts/ThemeContext';
 import {
   RiBarChartLine,
   RiGitMergeLine,
@@ -24,6 +25,7 @@ import ColorTheme from '../../styles/ColorTheme';
  */
 const InsightsComponent = () => {
   const { insights } = useAnalyticsContext();
+  const { theme } = useTheme();
   
   // Group insights by type
   const groupedInsights = insights.reduce((acc, insight) => {
@@ -162,19 +164,20 @@ const InsightsComponent = () => {
     return (
       <div 
         key={`${insight.type}-${insight.title}`} 
-        className={`border rounded-lg p-4 mb-3 transition-all duration-300 ${style.bg} ${style.border} ${style.hoverBg}`}
+        className="card mb-3 p-4 transition-all duration-300 hover:shadow-md"
+        style={{ borderLeft: `3px solid ${theme.primary}` }}
       >
         <div className="flex items-center mb-2">
-          <div className={`p-2 rounded-full ${style.iconBg} ${style.iconText} mr-3`}>
-            <IconComponent className="h-5 w-5" />
+          <div className="p-2 rounded-full mr-3" style={{ backgroundColor: `${theme.primary}20` }}>
+            <IconComponent className="h-5 w-5" style={{ color: theme.primary }} />
           </div>
           <h3 className="font-semibold">{insight.title}</h3>
         </div>
-        <p className={style.text}>{insight.description}</p>
+        <p>{insight.description}</p>
         
         {/* Render any additional data specific to the insight type */}
         {insight.type === 'correlation' && insight.correlation && (
-          <div className={`mt-3 p-2 rounded ${style.iconBg} ${style.text} text-sm`}>
+          <div className="mt-3 p-2 rounded text-sm" style={{ backgroundColor: `${theme.primary}10` }}>
             <div className="flex items-center">
               <span className="font-medium mr-1">Strength: </span>
               <span>{insight.correlation.strength}</span>
@@ -182,9 +185,9 @@ const InsightsComponent = () => {
               <span className="font-medium mr-1">Type: </span>
               <span className="flex items-center">
                 {insight.correlation.correlation > 0 ? (
-                  <>positive <RiArrowUpLine className="ml-1 h-4 w-4" /></>
+                  <>positive <RiArrowUpLine className="ml-1 h-4 w-4" style={{ color: theme.success }} /></>
                 ) : (
-                  <>negative <RiArrowDownLine className="ml-1 h-4 w-4" /></>
+                  <>negative <RiArrowDownLine className="ml-1 h-4 w-4" style={{ color: theme.danger }} /></>
                 )}
               </span>
             </div>
@@ -192,7 +195,7 @@ const InsightsComponent = () => {
         )}
         
         {insight.type === 'trend' && insight.data && (
-          <div className={`mt-3 p-2 rounded ${style.iconBg} ${style.text} text-sm flex justify-between`}>
+          <div className="mt-3 p-2 rounded text-sm flex justify-between" style={{ backgroundColor: `${theme.primary}10` }}>
             <div>
               <span className="font-medium">Current: </span>
               <span>{insight.data.current}</span>
@@ -208,22 +211,22 @@ const InsightsComponent = () => {
                 {insight.data.current - insight.data.previous}
               </span>
               {insight.data.current > insight.data.previous ? (
-                <RiArrowUpLine className="ml-1 h-4 w-4 text-green-600" />
+                <RiArrowUpLine className="ml-1 h-4 w-4" style={{ color: theme.success }} />
               ) : (
-                <RiArrowDownLine className="ml-1 h-4 w-4 text-red-600" />
+                <RiArrowDownLine className="ml-1 h-4 w-4" style={{ color: theme.danger }} />
               )}
             </div>
           </div>
         )}
         
         {insight.type === 'stat' && insight.data && (
-          <div className={`mt-3 p-2 rounded ${style.iconBg} ${style.text} text-sm`}>
+          <div className="mt-3 p-2 rounded text-sm" style={{ backgroundColor: `${theme.primary}10` }}>
             <div className="flex items-center justify-between">
               <div>
                 <span className="font-medium">Stat: </span>
                 <span>{insight.stat}</span>
               </div>
-              <div className={insight.data.current > insight.data.previous ? 'text-green-600' : 'text-red-600'}>
+              <div style={{ color: insight.data.current > insight.data.previous ? theme.success : theme.danger }}>
                 <span className="font-medium">Change: </span>
                 <span className="flex items-center">
                   {insight.data.current > insight.data.previous ? '+' : ''}
@@ -250,17 +253,15 @@ const InsightsComponent = () => {
     const info = groupInfo[type];
     const IconComponent = info.icon;
     
-    const style = getInsightStyle(type);
-    
     return (
       <div key={type} className="mb-6">
-        <div className={`flex items-center mb-3 p-2 rounded-lg ${style.bg} ${style.border}`}>
-          <div className={`p-2 rounded-full ${style.iconBg} ${style.iconText} mr-2`}>
-            <IconComponent className="h-5 w-5" />
+        <div className="flex items-center mb-3 p-2 rounded-lg" style={{ backgroundColor: `${theme.primary}10` }}>
+          <div className="p-2 rounded-full mr-2" style={{ backgroundColor: `${theme.primary}20` }}>
+            <IconComponent className="h-5 w-5" style={{ color: theme.primary }} />
           </div>
           <div>
             <h2 className="text-lg font-semibold">{info.title}</h2>
-            <p className="text-sm text-gray-600">{info.description}</p>
+            <p className="text-sm opacity-80">{info.description}</p>
           </div>
         </div>
         
@@ -299,23 +300,23 @@ const InsightsComponent = () => {
   const animationClasses = "transition-all duration-500 animate-fadeIn";
   
   return (
-    <div className="bg-white rounded-lg shadow p-4 mb-6 border border-gray-100 transition-all duration-300 hover:shadow-md">
+    <div className="card mb-6 transition-all duration-300">
       <h2 className="text-xl font-semibold mb-4 flex items-center">
-        <RiLightbulbLine className="mr-2 h-6 w-6 text-yellow-500" />
+        <RiLightbulbLine className="mr-2 h-6 w-6" style={{ color: theme.primary }} />
         Insights & Recommendations
       </h2>
       
       {Object.keys(groupedInsights).length === 0 ? (
         <div className={animationClasses}>
-          <div className="p-4 mb-4 bg-gray-50 rounded-lg text-center text-gray-600 border border-gray-200">
-            <RiInformationLine className="mx-auto mb-2 h-8 w-8 text-gray-400" />
+          <div className="p-4 mb-4 rounded-lg text-center card">
+            <RiInformationLine className="mx-auto mb-2 h-8 w-8 opacity-50" />
             <p className="mb-2">Not enough data to generate personalized insights yet.</p>
             <p className="text-sm">Complete more tasks and check back later for custom recommendations!</p>
           </div>
           
           <div className="mt-6">
             <h3 className="text-lg font-semibold mb-3 flex items-center">
-              <RiLightbulbLine className="mr-2 h-5 w-5 text-indigo-500" />
+              <RiLightbulbLine className="mr-2 h-5 w-5" style={{ color: theme.primary }} />
               Getting Started Recommendations
             </h3>
             <div className="space-y-3">
@@ -329,9 +330,9 @@ const InsightsComponent = () => {
         </div>
       )}
       
-      <div className="mt-4 text-sm text-gray-600 bg-blue-50 p-3 rounded-lg border border-blue-100">
+      <div className="mt-4 text-sm p-3 rounded-lg card" style={{ backgroundColor: `${theme.primary}10` }}>
         <div className="flex items-start">
-          <RiInformationLine className="h-5 w-5 mr-2 text-blue-500 mt-0.5" />
+          <RiInformationLine className="h-5 w-5 mr-2 mt-0.5" style={{ color: theme.primary }} />
           <div>
             <p>Insights are automatically generated based on your activity patterns and progress.</p>
             <p className="mt-1">Check back regularly for updated recommendations as you collect more data!</p>
