@@ -3,11 +3,13 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useFriend } from '../../contexts/FriendContext';
 import ProfilePicture from '../../components/ProfilePicture';
+import { useNavigate } from 'react-router-dom';
 
 const UserSearch = () => {
   const { theme } = useTheme();
   const { currentUser } = useAuth();
   const { searchUsers, sendFriendRequest, sentRequests } = useFriend();
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -43,7 +45,10 @@ const UserSearch = () => {
   };
 
   // Handle sending a friend request
-  const handleSendFriendRequest = async (userId) => {
+  const handleSendFriendRequest = async (userId, e) => {
+    // Stop event propagation to prevent navigation when clicking the button
+    e.stopPropagation();
+    
     try {
       const success = await sendFriendRequest(userId);
       if (success) {
@@ -54,6 +59,11 @@ const UserSearch = () => {
       console.error('Error sending friend request:', err);
       setError('Failed to send friend request. Please try again.');
     }
+  };
+  
+  // Handle viewing a user's profile
+  const handleViewProfile = (userId) => {
+    navigate(`/social/friend/${userId}`);
   };
 
   return (
@@ -102,11 +112,13 @@ const UserSearch = () => {
             {searchResults.map(user => (
               <div
                 key={user.id}
-                className="flex items-center justify-between p-md"
+                className="flex items-center justify-between p-md cursor-pointer hover:bg-opacity-80"
                 style={{
                   backgroundColor: 'rgba(255, 255, 255, 0.05)',
                   borderRadius: 'var(--border-radius-md)',
+                  transition: 'background-color 0.2s'
                 }}
+                onClick={() => handleViewProfile(user.id)}
               >
                 <div className="flex items-center">
                   <ProfilePicture 
@@ -120,7 +132,7 @@ const UserSearch = () => {
                 </div>
                 <button
                   className="btn btn-outline"
-                  onClick={() => handleSendFriendRequest(user.id)}
+                  onClick={(e) => handleSendFriendRequest(user.id, e)}
                   disabled={requestSent[user.id] || sentRequests.some(req => req.id === user.id)}
                 >
                   {requestSent[user.id] || sentRequests.some(req => req.id === user.id) 

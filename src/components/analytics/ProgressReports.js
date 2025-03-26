@@ -6,6 +6,7 @@ import {
 } from 'recharts';
 import { useAnalyticsContext } from '../../contexts/AnalyticsContext';
 import { useGame } from '../../contexts/GameContext';
+import { useTheme } from '../../contexts/ThemeContext';
 import { 
   RiLineChartLine,
   RiCalendarLine, 
@@ -16,7 +17,6 @@ import {
   RiArrowRightUpLine,
   RiInformationLine
 } from 'react-icons/ri';
-import ColorTheme from '../../styles/ColorTheme';
 
 /**
  * ProgressReports Component
@@ -29,6 +29,7 @@ import ColorTheme from '../../styles/ColorTheme';
 const ProgressReports = ({ showTitle = false }) => {
   const { weeklyProgress, monthlyProgress, formatWeekKey, formatMonthKey, rawStats } = useAnalyticsContext();
   const { stats } = useGame();
+  const { theme } = useTheme();
   const [timeframe, setTimeframe] = useState('weekly'); // 'weekly' or 'monthly'
   const [chartType, setChartType] = useState('tasks'); // 'tasks', 'stats', 'radar'
   
@@ -39,14 +40,23 @@ const ProgressReports = ({ showTitle = false }) => {
     animationEasing: 'ease-in-out'
   };
   
-  // Get stat colors from our color theme
+  // Get stat colors from our theme
   const getStatColors = () => {
     const statTypes = Object.keys(rawStats);
     const statColors = {};
     
-    // Assign colors based on stat type if they exist in ColorTheme
-    statTypes.forEach(stat => {
-      statColors[stat] = ColorTheme.statColors[stat.toLowerCase()] || ColorTheme.primary;
+    // Assign colors based on stat type
+    const baseColors = [
+      theme.primary,
+      theme.success,
+      theme.warning,
+      theme.accent,
+      theme.info,
+      theme.secondary
+    ];
+    
+    statTypes.forEach((stat, index) => {
+      statColors[stat] = baseColors[index % baseColors.length];
     });
     
     return statColors;
@@ -100,8 +110,8 @@ const ProgressReports = ({ showTitle = false }) => {
     if (!active || !payload || !payload.length) return null;
     
     return (
-      <div className="bg-white p-4 shadow-lg rounded-lg border border-gray-200">
-        <p className="font-semibold text-gray-800 mb-2">{label}</p>
+      <div style={{ backgroundColor: theme.card, padding: '16px', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)', border: `1px solid ${theme.border}` }}>
+        <p className="font-semibold mb-2">{label}</p>
         <div className="space-y-1">
           {payload.map((entry, index) => (
             <div key={index} className="flex items-center">
@@ -127,24 +137,24 @@ const ProgressReports = ({ showTitle = false }) => {
     const changePercent = data.previous ? Math.round((change / data.previous) * 100) : 0;
     
     return (
-      <div className="bg-white p-4 shadow-lg rounded-lg border border-gray-200">
-        <p className="font-semibold text-gray-800 mb-2">{data.subject}</p>
+      <div style={{ backgroundColor: theme.card, padding: '16px', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)', border: `1px solid ${theme.border}` }}>
+        <p className="font-semibold mb-2">{data.subject}</p>
         <div className="space-y-2">
           <div className="flex items-center">
-            <div className="w-3 h-3 rounded-full mr-2 bg-indigo-500"></div>
+            <div className="w-3 h-3 rounded-full mr-2" style={{ backgroundColor: theme.primary }}></div>
             <span className="text-sm">Current: </span>
             <span className="text-sm font-medium ml-1">{data.current} points</span>
           </div>
           <div className="flex items-center">
-            <div className="w-3 h-3 rounded-full mr-2 bg-purple-300"></div>
+            <div className="w-3 h-3 rounded-full mr-2" style={{ backgroundColor: `${theme.primary}80` }}></div>
             <span className="text-sm">Previous: </span>
             <span className="text-sm font-medium ml-1">{data.previous} points</span>
           </div>
           {data.previous > 0 && (
             <div className="flex items-center">
-              <div className={`w-3 h-3 rounded-full mr-2 ${change >= 0 ? 'bg-green-500' : 'bg-red-500'}`}></div>
+              <div className="w-3 h-3 rounded-full mr-2" style={{ backgroundColor: change >= 0 ? theme.success : theme.danger }}></div>
               <span className="text-sm">Change: </span>
-              <span className={`text-sm font-medium ml-1 ${change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              <span className="text-sm font-medium ml-1" style={{ color: change >= 0 ? theme.success : theme.danger }}>
                 {change >= 0 ? '+' : ''}{change} ({changePercent >= 0 ? '+' : ''}{changePercent}%)
               </span>
             </div>
@@ -160,8 +170,8 @@ const ProgressReports = ({ showTitle = false }) => {
     
     if (!data || data.length === 0) {
       return (
-        <div className="p-10 text-center text-gray-500">
-          <RiInformationLine className="mx-auto mb-2 h-10 w-10" />
+        <div className="p-10 text-center">
+          <RiInformationLine className="mx-auto mb-2 h-10 w-10 opacity-50" />
           <p>Not enough progress data available yet.</p>
           <p className="text-sm mt-2">Complete more tasks to see your progress over time!</p>
         </div>
@@ -172,15 +182,15 @@ const ProgressReports = ({ showTitle = false }) => {
       return (
         <ResponsiveContainer width="100%" height={300}>
           <BarChart data={data} margin={{ top: 20, right: 30, left: 0, bottom: 5 }} {...animationConfig}>
-            <CartesianGrid strokeDasharray="3 3" stroke={ColorTheme.chart.gridLines} />
+            <CartesianGrid strokeDasharray="3 3" stroke={theme.border} opacity={0.5} />
             <XAxis 
               dataKey="name" 
-              tick={{ fill: '#4b5563' }} 
-              tickLine={{ stroke: '#6b7280' }}
+              tick={{ fill: theme.text }} 
+              tickLine={{ stroke: theme.border }}
             />
             <YAxis
-              tick={{ fill: '#4b5563' }} 
-              tickLine={{ stroke: '#6b7280' }}
+              tick={{ fill: theme.text }} 
+              tickLine={{ stroke: theme.border }}
               allowDecimals={false}
             />
             <Tooltip content={<CustomTooltip />} />
@@ -188,7 +198,7 @@ const ProgressReports = ({ showTitle = false }) => {
             <Bar 
               dataKey="tasks" 
               name="Completed Tasks" 
-              fill={ColorTheme.primary} 
+              fill={theme.primary} 
               radius={[4, 4, 0, 0]}
               animationBegin={0}
               animationDuration={1200}
@@ -196,7 +206,7 @@ const ProgressReports = ({ showTitle = false }) => {
             <Bar 
               dataKey="achievements" 
               name="Achievements" 
-              fill={ColorTheme.secondary} 
+              fill={theme.accent} 
               radius={[4, 4, 0, 0]}
               animationBegin={300}
               animationDuration={1200}
@@ -213,15 +223,15 @@ const ProgressReports = ({ showTitle = false }) => {
       return (
         <ResponsiveContainer width="100%" height={300}>
           <LineChart data={data} margin={{ top: 20, right: 30, left: 0, bottom: 5 }} {...animationConfig}>
-            <CartesianGrid strokeDasharray="3 3" stroke={ColorTheme.chart.gridLines} />
+            <CartesianGrid strokeDasharray="3 3" stroke={theme.border} opacity={0.5} />
             <XAxis 
               dataKey="name" 
-              tick={{ fill: '#4b5563' }} 
-              tickLine={{ stroke: '#6b7280' }}
+              tick={{ fill: theme.text }} 
+              tickLine={{ stroke: theme.border }}
             />
             <YAxis
-              tick={{ fill: '#4b5563' }} 
-              tickLine={{ stroke: '#6b7280' }}
+              tick={{ fill: theme.text }} 
+              tickLine={{ stroke: theme.border }}
               allowDecimals={false}
             />
             <Tooltip content={<CustomTooltip />} />
@@ -250,21 +260,21 @@ const ProgressReports = ({ showTitle = false }) => {
       return (
         <ResponsiveContainer width="100%" height={350}>
           <RadarChart cx="50%" cy="50%" outerRadius="80%" data={radarData} {...animationConfig}>
-            <PolarGrid stroke={ColorTheme.chart.gridLines} />
-            <PolarAngleAxis dataKey="subject" tick={{ fill: '#4b5563' }} />
-            <PolarRadiusAxis tick={{ fill: '#4b5563' }} />
+            <PolarGrid stroke={theme.border} opacity={0.5} />
+            <PolarAngleAxis dataKey="subject" tick={{ fill: theme.text }} />
+            <PolarRadiusAxis tick={{ fill: theme.text }} />
             <Radar 
               name="Current Period" 
               dataKey="current" 
-              stroke={ColorTheme.primary} 
-              fill={ColorTheme.primary} 
+              stroke={theme.primary} 
+              fill={theme.primary} 
               fillOpacity={0.6} 
             />
             <Radar 
               name="Previous Period" 
               dataKey="previous" 
-              stroke={ColorTheme.secondary} 
-              fill={ColorTheme.secondary} 
+              stroke={`${theme.primary}80`} 
+              fill={`${theme.primary}80`} 
               fillOpacity={0.3} 
             />
             <Legend />
@@ -301,43 +311,43 @@ const ProgressReports = ({ showTitle = false }) => {
     });
     
     return (
-      <div className="bg-gray-50 p-4 rounded-lg mt-4 border border-gray-200 transition-all duration-300 hover:shadow-sm">
+      <div className="card p-4 mt-4">
         <h3 className="font-medium mb-3 flex items-center">
-          <RiArrowRightUpLine className="mr-2 h-5 w-5 text-gray-600" />
+          <RiArrowRightUpLine className="mr-2 h-5 w-5" style={{ color: theme.primary }} />
           {timeframe === 'weekly' ? 'This Week vs. Last Week' : 'This Month vs. Last Month'} Summary
         </h3>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100 transition-all duration-300 hover:shadow">
-            <div className="text-sm text-gray-500 flex items-center">
+          <div className="card p-4">
+            <div className="text-sm opacity-70 flex items-center">
               <RiBarChartLine className="mr-1 h-4 w-4" />
               Tasks Completed
             </div>
             <div className="text-xl font-semibold mt-1">{current.tasks}</div>
-            <div className={`text-sm flex items-center ${taskDiff >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+            <div className="text-sm flex items-center" style={{ color: taskDiff >= 0 ? theme.success : theme.danger }}>
               {taskDiff >= 0 ? <RiArrowUpLine className="mr-1 h-4 w-4" /> : <RiArrowDownLine className="mr-1 h-4 w-4" />}
               {taskDiff >= 0 ? '+' : ''}{taskDiff} ({taskPercent >= 0 ? '+' : ''}{taskPercent}%)
             </div>
           </div>
           
-          <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100 transition-all duration-300 hover:shadow">
-            <div className="text-sm text-gray-500 flex items-center">
+          <div className="card p-4">
+            <div className="text-sm opacity-70 flex items-center">
               <RiLineChartLine className="mr-1 h-4 w-4" />
               Total Stat Growth
             </div>
             <div className="text-xl font-semibold mt-1">{totalStatGrowth}</div>
-            <div className="text-sm text-gray-600">Points across all stats</div>
+            <div className="text-sm opacity-70">Points across all stats</div>
           </div>
           
-          <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100 transition-all duration-300 hover:shadow">
-            <div className="text-sm text-gray-500 flex items-center">
+          <div className="card p-4">
+            <div className="text-sm opacity-70 flex items-center">
               <RiArrowUpLine className="mr-1 h-4 w-4" />
               Fastest Growing Stat
             </div>
             <div className="text-xl font-semibold mt-1">
               {fastestGrowingStat.name || 'None'}
             </div>
-            <div className="text-sm text-green-600 flex items-center">
+            <div className="text-sm flex items-center" style={{ color: theme.success }}>
               <RiArrowUpLine className="mr-1 h-4 w-4" />
               +{fastestGrowingStat.growth} points
             </div>
@@ -350,11 +360,11 @@ const ProgressReports = ({ showTitle = false }) => {
   // Button for toggling timeframes
   const TimeframeToggleButton = ({ value, label, icon: Icon, active }) => (
     <button
-      className={`px-3 py-1 rounded text-sm flex items-center transition-all duration-200 ${
-        active 
-          ? 'bg-indigo-600 text-white shadow-sm' 
-          : 'bg-gray-200 hover:bg-gray-300'
-      }`}
+      className={`px-3 py-1 rounded text-sm flex items-center transition-all duration-200 ${active ? 'font-bold' : ''}`}
+      style={{
+        backgroundColor: active ? `${theme.primary}20` : 'rgba(255, 255, 255, 0.05)',
+        color: active ? theme.primary : theme.text,
+      }}
       onClick={() => setTimeframe(value)}
       aria-pressed={active}
     >
@@ -366,11 +376,11 @@ const ProgressReports = ({ showTitle = false }) => {
   // Button for toggling chart types
   const ChartTypeButton = ({ value, label, icon: Icon, active }) => (
     <button
-      className={`px-3 py-1 rounded text-sm flex items-center transition-all duration-200 ${
-        active 
-          ? 'bg-indigo-600 text-white shadow-sm' 
-          : 'bg-gray-200 hover:bg-gray-300'
-      }`}
+      className={`px-3 py-1 rounded text-sm flex items-center transition-all duration-200 ${active ? 'font-bold' : ''}`}
+      style={{
+        backgroundColor: active ? `${theme.primary}20` : 'rgba(255, 255, 255, 0.05)',
+        color: active ? theme.primary : theme.text,
+      }}
       onClick={() => setChartType(value)}
       aria-pressed={active}
     >
@@ -380,15 +390,15 @@ const ProgressReports = ({ showTitle = false }) => {
   );
   
   return (
-    <div className="bg-white rounded-lg shadow p-4 mb-6 border border-gray-100 transition-all duration-300 hover:shadow-md">
+    <div className="card mb-6 transition-all duration-300">
       <div className="flex justify-between items-center mb-4">
         <div>
           <h2 className="text-xl font-semibold flex items-center">
-            <RiLineChartLine className="mr-2 h-6 w-6 text-gray-700" />
+            <RiLineChartLine className="mr-2 h-6 w-6" style={{ color: theme.primary }} />
             Progress Reports
-            {!showTitle && <span className="ml-2 text-xs text-gray-500 font-normal">Track your development over time</span>}
+            {!showTitle && <span className="ml-2 text-xs opacity-70 font-normal">Track your development over time</span>}
           </h2>
-          <p className="text-xs text-gray-500">Showing raw stat points for more detailed tracking</p>
+          <p className="text-xs opacity-70">Showing raw stat points for more detailed tracking</p>
         </div>
         
         <div className="flex space-x-2">
@@ -431,9 +441,9 @@ const ProgressReports = ({ showTitle = false }) => {
       {renderChart()}
       {renderProgressSummary()}
       
-      <div className="mt-4 text-sm text-gray-600 bg-blue-50 p-3 rounded-lg border border-blue-100">
+      <div className="mt-4 text-sm p-3 rounded-lg card" style={{ backgroundColor: `${theme.primary}10` }}>
         <div className="flex items-start">
-          <RiInformationLine className="h-5 w-5 mr-2 text-blue-500 mt-0.5" />
+          <RiInformationLine className="h-5 w-5 mr-2 mt-0.5" style={{ color: theme.primary }} />
           <div>
             <p>These reports show your progress over time at a {timeframe === 'weekly' ? 'weekly' : 'monthly'} level.</p>
             <p className="mt-1">Use this to track your development and identify trends in your growth journey.</p>

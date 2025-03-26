@@ -1,7 +1,12 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useGame } from '../contexts/GameContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { useAuth } from '../contexts/AuthContext';
+import { useFriend } from '../contexts/FriendContext';
 import { format, differenceInDays } from 'date-fns';
+import { useNavigate } from 'react-router-dom';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../firebase/config';
 import {
   RadarChart,
   PolarGrid,
@@ -13,6 +18,10 @@ import {
   Legend,
 } from 'recharts';
 import ProfilePicture from '../components/ProfilePicture';
+import TitleDisplay from '../components/titles/TitleDisplay';
+import TitlesManager from '../components/titles/TitlesManager';
+import { getUserTitles } from '../utils/titles/titleService';
+import { uploadProfilePicture, testStorageConnection } from '../services/storageService';
 
 /**
  * Profile page component that displays user information, stats visualization,
@@ -31,10 +40,73 @@ const Profile = () => {
     dispatch
   } = useGame();
   const { theme } = useTheme();
+  const { currentUser } = useAuth();
+  const { friends } = useFriend();
+  const navigate = useNavigate();
   const [selectedStatFilter, setSelectedStatFilter] = useState('all');
   const [isEditingPicture, setIsEditingPicture] = useState(false);
   const [selectedAvatar, setSelectedAvatar] = useState(profilePicture);
+  const [selectedTitle, setSelectedTitle] = useState(null);
+  const [showTitleDropdown, setShowTitleDropdown] = useState(false);
+  const [showFriendsModal, setShowFriendsModal] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState(null);
   const fileInputRef = useRef(null);
+  const titleDropdownRef = useRef(null);
+
+  // Initialize selectedAvatar when profilePicture changes or from Auth
+  useEffect(() => {
+    // First check if there's a profile picture in the game state
+    if (profilePicture) {
+      setSelectedAvatar(profilePicture);
+    } 
+    // Otherwise, check if there's a photoURL in the Auth user profile
+    else if (currentUser && currentUser.photoURL) {
+      setSelectedAvatar(currentUser.photoURL);
+      // Update the Redux state as well
+      dispatch({
+        type: 'SET_PROFILE_PICTURE',
+        payload: currentUser.photoURL
+      });
+    }
+  }, [profilePicture, currentUser]);
+
+  // Load selected title
+  useEffect(() => {
+    const loadUserTitle = async () => {
+      if (!currentUser) return;
+      
+      try {
+        const result = await getUserTitles(currentUser.uid);
+        if (result.success) {
+          setSelectedTitle(result.selectedTitle);
+        }
+      } catch (error) {
+        console.error('Error loading user title:', error);
+      }
+    };
+    
+    loadUserTitle();
+  }, [currentUser]);
+  
+  // Handle click outside to close dropdown
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (titleDropdownRef.current && !titleDropdownRef.current.contains(event.target)) {
+        setShowTitleDropdown(false);
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  // Toggle title dropdown
+  const toggleTitleDropdown = () => {
+    setShowTitleDropdown(!showTitleDropdown);
+  };
 
   // Default avatars for users to select from
   const defaultAvatars = [
@@ -49,28 +121,90 @@ const Profile = () => {
 
   // Handle custom image upload
   const handleImageUpload = (event) => {
+    setUploadError(null);
     const file = event.target.files[0];
     if (!file) return;
+
+    // Check file size (limit to 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setUploadError("Image is too large. Please select an image under 5MB.");
+      return;
+    }
 
     const reader = new FileReader();
     reader.onloadend = () => {
       setSelectedAvatar(reader.result);
     };
+    reader.onerror = () => {
+      setUploadError("Failed to read the selected file. Please try again.");
+    };
     reader.readAsDataURL(file);
   };
 
   // Save the selected profile picture
-  const handleSaveProfilePicture = () => {
-    dispatch({
-      type: 'SET_PROFILE_PICTURE',
-      payload: selectedAvatar
-    });
-    setIsEditingPicture(false);
+  const handleSaveProfilePicture = async () => {
+    console.log("Save profile picture clicked");
+    console.log("Current user:", currentUser);
+    console.log("Selected avatar type:", typeof selectedAvatar);
+    setUploadError(null);
+    
+    try {
+      // Only upload custom images, not default avatars
+      if (selectedAvatar && !defaultAvatars.includes(selectedAvatar)) {
+        // Show loading indicator
+        setIsUploading(true);
+        
+        console.log("Uploading custom image");
+        // Upload to Firebase Storage and get URL
+        const imageUrl = await uploadProfilePicture(selectedAvatar);
+        console.log("Got image URL:", imageUrl);
+        
+        // Save URL to game state
+        dispatch({
+          type: 'SET_PROFILE_PICTURE',
+          payload: imageUrl
+        });
+        console.log("Dispatched SET_PROFILE_PICTURE action");
+      } else {
+        // For default avatars, just save directly
+        console.log("Saving default avatar:", selectedAvatar);
+        dispatch({
+          type: 'SET_PROFILE_PICTURE',
+          payload: selectedAvatar
+        });
+        console.log("Dispatched SET_PROFILE_PICTURE for default avatar");
+      }
+      
+      setIsEditingPicture(false);
+    } catch (error) {
+      console.error("Failed to save profile picture:", error);
+      // Show error message to user
+      setUploadError(error.message || "Failed to save profile picture. Please try again.");
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   // Trigger file input click
   const handleUploadClick = () => {
     fileInputRef.current.click();
+  };
+
+  // Debug function to test storage
+  const testStorage = async () => {
+    try {
+      setIsUploading(true);
+      setUploadError(null);
+      const result = await testStorageConnection();
+      console.log(result);
+      alert('Storage connection test: ' + result);
+    } catch (error) {
+      console.error('Storage test failed:', error);
+      setUploadError(error.message);
+      alert('Storage test failed: ' + error.message);
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   // Calculate account creation date from the first completed task
@@ -138,7 +272,10 @@ const Profile = () => {
                     {defaultAvatars.map((avatar, index) => (
                       <div
                         key={index}
-                        onClick={() => setSelectedAvatar(avatar)}
+                        onClick={() => {
+                          setSelectedAvatar(avatar);
+                          setUploadError(null);
+                        }}
                         style={{
                           border: selectedAvatar === avatar ? `2px solid ${theme.primary}` : '2px solid transparent',
                           borderRadius: '50%',
@@ -166,8 +303,17 @@ const Profile = () => {
                       className="btn btn-outline"
                       onClick={handleUploadClick}
                       style={{ width: '100%' }}
+                      disabled={isUploading}
                     >
                       Upload Image
+                    </button>
+                    <button
+                      className="btn btn-outline"
+                      onClick={testStorage}
+                      style={{ width: '100%', backgroundColor: 'rgba(255, 0, 0, 0.1)' }}
+                      disabled={isUploading}
+                    >
+                      Test Storage (Debug)
                     </button>
                     <input
                       type="file"
@@ -181,19 +327,45 @@ const Profile = () => {
                         className="btn btn-primary"
                         onClick={handleSaveProfilePicture}
                         style={{ flex: 1 }}
+                        disabled={isUploading}
                       >
-                        Save
+                        {isUploading ? 'Uploading...' : 'Save'}
                       </button>
                       <button
                         className="btn btn-outline"
                         onClick={() => {
                           setIsEditingPicture(false);
                           setSelectedAvatar(profilePicture);
+                          setUploadError(null);
                         }}
                         style={{ flex: 1 }}
+                        disabled={isUploading}
                       >
                         Cancel
                       </button>
+                    </div>
+                    {isUploading && (
+                      <div style={{ textAlign: 'center', marginTop: 'var(--spacing-xs)' }}>
+                        <small style={{ opacity: 0.7 }}>Please wait while your image uploads...</small>
+                      </div>
+                    )}
+                    {uploadError && (
+                      <div style={{ 
+                        textAlign: 'center', 
+                        marginTop: 'var(--spacing-xs)', 
+                        color: '#e53935',
+                        backgroundColor: 'rgba(229, 57, 53, 0.1)',
+                        padding: '8px',
+                        borderRadius: '4px'
+                      }}>
+                        <small>{uploadError}</small>
+                      </div>
+                    )}
+                    <div style={{ textAlign: 'center', marginTop: 'var(--spacing-xs)' }}>
+                      <small style={{ opacity: 0.7 }}>Current profile URL: {profilePicture || "None"}</small>
+                    </div>
+                    <div style={{ textAlign: 'center' }}>
+                      <small style={{ opacity: 0.7 }}>Auth status: {currentUser ? "Logged in" : "Not logged in"}</small>
                     </div>
                   </div>
                 </div>
@@ -219,10 +391,58 @@ const Profile = () => {
             
             {/* Player Name */}
             <h1 className="text-3xl font-bold">{playerName}</h1>
+            
+            {/* User Title with Dropdown */}
+            <div style={{ marginTop: 'var(--spacing-md)', position: 'relative' }} ref={titleDropdownRef}>
+              {selectedTitle && (
+                <div style={{ marginBottom: 'var(--spacing-xs)' }}>
+                  <TitleDisplay
+                    titleId={selectedTitle}
+                    size="medium"
+                  />
+                </div>
+              )}
+              
+              <button
+                className="btn btn-outline btn-sm"
+                onClick={toggleTitleDropdown}
+                style={{ 
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px'
+                }}
+              >
+                {selectedTitle ? 'Change Title' : 'Select Title'}
+                <span style={{ fontSize: '0.8em' }}>▼</span>
+              </button>
+              
+              {/* Dropdown Content */}
+              {showTitleDropdown && (
+                <div style={{
+                  position: 'absolute',
+                  top: '100%',
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  width: '300px',
+                  maxWidth: '90vw',
+                  backgroundColor: theme.card,
+                  borderRadius: 'var(--border-radius-md)',
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
+                  zIndex: 10,
+                  marginTop: 'var(--spacing-sm)',
+                  border: `1px solid ${theme.border}`,
+                  paddingBottom: 'var(--spacing-md)'
+                }}>
+                  <div style={{ padding: 'var(--spacing-sm)' }}>
+                    <TitlesManager />
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Stats Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-md">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-md">
             <div style={{ 
               padding: 'var(--spacing-md)',
               backgroundColor: 'rgba(255, 255, 255, 0.05)',
@@ -251,6 +471,39 @@ const Profile = () => {
             }}>
               <div className="text-sm mb-xs" style={{ opacity: 0.8 }}>Streak</div>
               <div className="text-xl font-bold">🔥 {streak.current} day{streak.current !== 1 ? 's' : ''}</div>
+            </div>
+
+            <div style={{ 
+              padding: 'var(--spacing-md)',
+              backgroundColor: 'rgba(255, 255, 255, 0.05)',
+              borderRadius: 'var(--border-radius-md)',
+              textAlign: 'center'
+            }}>
+              <div className="text-sm mb-xs" style={{ opacity: 0.8 }}>Friends</div>
+              <div 
+                className="text-xl font-bold" 
+                onClick={() => setShowFriendsModal(true)}
+                style={{
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  padding: '4px 8px',
+                  borderRadius: 'var(--border-radius-md)',
+                  transition: 'all 0.2s ease',
+                  backgroundColor: 'rgba(255, 255, 255, 0.03)',
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.03)';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                }}
+              >
+                👥 {friends.length} {friends.length === 1 ? 'friend' : 'friends'}
+              </div>
             </div>
 
             <div style={{ 
@@ -502,6 +755,228 @@ const Profile = () => {
           </div>
         )}
       </section>
+
+      {/* Friends Modal */}
+      {showFriendsModal && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.75)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: 'var(--spacing-md)',
+        }}>
+          <div style={{
+            backgroundColor: theme.card,
+            borderRadius: 'var(--border-radius-lg)',
+            boxShadow: 'var(--shadow-xl)',
+            width: '100%',
+            maxWidth: '600px',
+            maxHeight: '80vh',
+            overflowY: 'auto',
+            position: 'relative',
+          }}>
+            <button 
+              style={{
+                position: 'absolute',
+                top: 'var(--spacing-md)',
+                right: 'var(--spacing-md)',
+                background: 'none',
+                border: 'none',
+                fontSize: '1.5rem',
+                cursor: 'pointer',
+                color: theme.text,
+                opacity: 0.7,
+              }}
+              onClick={() => setShowFriendsModal(false)}
+            >
+              ✕
+            </button>
+            
+            <div style={{ padding: 'var(--spacing-lg)' }}>
+              <div style={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center', 
+                marginBottom: 'var(--spacing-md)' 
+              }}>
+                <h2 style={{ margin: 0 }}>Your Friends</h2>
+                
+                <button 
+                  className="btn btn-primary"
+                  onClick={() => {
+                    setShowFriendsModal(false);
+                    navigate('/social/friends');
+                  }}
+                >
+                  Manage Friends
+                </button>
+              </div>
+              
+              {friends.length > 0 ? (
+                <div className="space-y-md">
+                  {friends.map((friend) => (
+                    <FriendItem 
+                      key={friend.userId} 
+                      friendId={friend.userId} 
+                      friendSince={friend.friendSince}
+                      onClick={() => {
+                        setShowFriendsModal(false);
+                        navigate(`/social/friend/${friend.userId}`);
+                      }}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div style={{ 
+                  textAlign: 'center', 
+                  padding: 'var(--spacing-xl)', 
+                  opacity: 0.8 
+                }}>
+                  <div style={{ fontSize: '48px', marginBottom: '16px' }}>👥</div>
+                  <p>You don't have any friends yet.</p>
+                  <button 
+                    className="btn btn-primary mt-md"
+                    onClick={() => {
+                      setShowFriendsModal(false);
+                      navigate('/social');
+                    }}
+                  >
+                    Find Friends
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+/**
+ * Component to display a single friend item with their basic info
+ */
+const FriendItem = ({ friendId, friendSince, onClick }) => {
+  const { theme } = useTheme();
+  const [friendData, setFriendData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadFriendData = async () => {
+      try {
+        const docRef = doc(db, 'gameStates', friendId);
+        const docSnap = await getDoc(docRef);
+        
+        if (docSnap.exists()) {
+          setFriendData(docSnap.data());
+        }
+      } catch (error) {
+        console.error('Error loading friend data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadFriendData();
+  }, [friendId]);
+
+  if (loading) {
+    return (
+      <div style={{
+        padding: 'var(--spacing-md)',
+        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+        borderRadius: 'var(--border-radius-md)',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 'var(--spacing-md)',
+      }}>
+        <div style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: 'rgba(255, 255, 255, 0.1)' }}></div>
+        <div style={{ flex: 1 }}>
+          <div style={{ height: '18px', width: '120px', backgroundColor: 'rgba(255, 255, 255, 0.1)', borderRadius: '4px', marginBottom: '8px' }}></div>
+          <div style={{ height: '14px', width: '80px', backgroundColor: 'rgba(255, 255, 255, 0.1)', borderRadius: '4px' }}></div>
+        </div>
+      </div>
+    );
+  }
+
+  // Calculate level and rank if friend data exists
+  let level = 1;
+  let rank = 'Beginner';
+  
+  if (friendData && friendData.stats) {
+    const totalLevel = Object.values(friendData.stats).reduce((sum, stat) => sum + stat.level, 0);
+    level = Math.floor(totalLevel / Object.keys(friendData.stats).length);
+    
+    // Get rank based on level (simplified version)
+    const RANKS = [
+      { name: 'Beginner', range: [0, 9] },
+      { name: 'Novice', range: [10, 19] },
+      { name: 'Apprentice', range: [20, 29] },
+      { name: 'Adept', range: [30, 39] },
+      { name: 'Expert', range: [40, 49] },
+      { name: 'Master', range: [50, 59] },
+      { name: 'Grandmaster', range: [60, 69] },
+      { name: 'Legend', range: [70, 79] },
+      { name: 'Mythic', range: [80, 89] },
+      { name: 'Sovereign', range: [90, 99] },
+      { name: 'Transcendent', range: [100, Infinity] }
+    ];
+    
+    for (const rankInfo of RANKS) {
+      if (level >= rankInfo.range[0] && level <= rankInfo.range[1]) {
+        rank = rankInfo.name;
+        break;
+      }
+    }
+  }
+
+  return (
+    <div 
+      style={{
+        padding: 'var(--spacing-md)',
+        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+        borderRadius: 'var(--border-radius-md)',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 'var(--spacing-md)',
+        cursor: 'pointer',
+        transition: 'background-color 0.2s ease',
+      }}
+      onClick={onClick}
+      onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.08)'}
+      onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)'}
+    >
+      <ProfilePicture 
+        size="medium"
+        src={friendData?.profilePicture}
+      />
+      
+      <div style={{ flex: 1 }}>
+        <div style={{ fontWeight: 'bold', fontSize: '1rem' }}>
+          {friendData?.playerName || 'Unknown Player'}
+        </div>
+        <div style={{ fontSize: '0.875rem', opacity: 0.8 }}>
+          Level {level} {rank}
+        </div>
+        <div style={{ fontSize: '0.75rem', marginTop: '4px', opacity: 0.6 }}>
+          Friends since {new Date(friendSince).toLocaleDateString()}
+        </div>
+      </div>
+      
+      <div style={{ 
+        width: '24px', 
+        height: '24px', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center',
+        color: theme.text,
+        opacity: 0.6
+      }}>
+        ❯
+      </div>
     </div>
   );
 };

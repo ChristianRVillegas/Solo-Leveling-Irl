@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTask } from '../contexts/TaskContext';
 import { useGame } from '../contexts/GameContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -27,6 +27,103 @@ const Calendar = () => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [showAddTaskModal, setShowAddTaskModal] = useState(false);
+  
+  // Add CSS for calendar day hover effects
+  useEffect(() => {
+    // Create a style element
+    const styleEl = document.createElement('style');
+    styleEl.id = 'calendar-hover-styles';
+    
+    // Add the hover styles
+    styleEl.innerHTML = `
+      .calendar-day-add-btn {
+        opacity: 0.6;
+        transition: all 0.2s ease;
+      }
+      
+      .calendar-day-add-btn:hover {
+        opacity: 1;
+        transform: scale(1.1);
+        background-color: rgba(99, 102, 241, 0.3) !important;
+      }
+      
+      .calendar-day-add-btn::after {
+        content: 'Add task';
+        position: absolute;
+        top: -25px;
+        left: 0;
+        background-color: rgba(0, 0, 0, 0.7);
+        color: white;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 11px;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+        z-index: 10;
+        white-space: nowrap;
+      }
+      
+      .calendar-day-add-btn:hover::after {
+        opacity: 0.9;
+      }
+      
+      .calendar-day {
+        position: relative;
+      }
+      .calendar-day::before {
+        content: '';
+        position: absolute;
+        top: 4px;
+        left: 8px;
+        font-size: 16px;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+      }
+      .calendar-day-current-month:hover {
+        background-color: rgba(99, 102, 241, 0.05) !important;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+      }
+      .calendar-day-current-month::after {
+        content: attr(data-empty-message);
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background-color: rgba(0, 0, 0, 0.7);
+        color: white;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+        z-index: 10;
+        white-space: nowrap;
+      }
+      .calendar-day-current-month.empty-day:hover::after {
+        opacity: 0.8;
+        transition-delay: 0.3s;
+      }
+      .calendar-day-current-month:hover::before {
+        opacity: 0.5;
+      }
+      .calendar-day:not(.calendar-day-current-month):hover {
+        background-color: rgba(0, 0, 0, 0.08) !important;
+      }
+    `;
+    
+    // Add the style element to the document head
+    document.head.appendChild(styleEl);
+    
+    // Clean up on component unmount
+    return () => {
+      const existingStyle = document.getElementById('calendar-hover-styles');
+      if (existingStyle) {
+        existingStyle.remove();
+      }
+    };
+  }, []);
   
   /**
    * Navigate to the previous month
@@ -103,7 +200,8 @@ const Calendar = () => {
         days.push(
           <div
             key={day.toString()}
-            className="calendar-day"
+            className={`calendar-day ${isCurrentMonth ? 'calendar-day-current-month' : ''} ${tasksForDay.length === 0 && isCurrentMonth ? 'empty-day' : ''}`}
+            data-empty-message="Click to add task"
             style={{
               minHeight: '120px',
               padding: 'var(--spacing-xs)',
@@ -111,10 +209,15 @@ const Calendar = () => {
               border: `1px solid ${theme.border}`,
               cursor: 'pointer',
               position: 'relative',
-              color: !isCurrentMonth ? 'rgba(255, 255, 255, 0.3)' : theme.text
+              color: !isCurrentMonth ? 'rgba(255, 255, 255, 0.3)' : theme.text,
+              transition: 'all 0.2s ease',
             }}
             onClick={() => {
               setSelectedDate(day);
+              // If the user clicks on a date, open the task modal for that date
+              if (isCurrentMonth) {
+                setShowAddTaskModal(true);
+              }
             }}
           >
             <div 
@@ -137,7 +240,35 @@ const Calendar = () => {
             </div>
             
             {/* Task indicators - shows up to 3 tasks, then a +X more */}
-            <div style={{ marginTop: '24px' }}>
+            {isCurrentMonth && (
+            <div 
+              className="calendar-day-add-btn"
+              style={{ 
+                position: 'absolute', 
+                top: '6px', 
+                left: '6px',
+                height: '20px',
+                width: '20px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: '50%',
+                backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                fontSize: '14px',
+                cursor: 'pointer',
+                fontWeight: 'bold',
+                color: theme.primary
+              }}
+              onClick={(e) => {
+                e.stopPropagation(); // Prevent triggering the parent onClick
+                setSelectedDate(day);
+                setShowAddTaskModal(true);
+              }}
+            >
+              +
+            </div>
+          )}
+          <div style={{ marginTop: '24px' }}>
               {tasksForDay.slice(0, 3).map((task, index) => {
                 const isRecurring = task.frequency !== undefined;
                 const statInfo = STATS.find(s => s.id === task.statId);
@@ -208,8 +339,13 @@ const Calendar = () => {
           <button 
             className="btn btn-primary"
             onClick={() => setShowAddTaskModal(true)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '5px'
+            }}
           >
-            Add Task
+            <span>+</span> Add Task
           </button>
         </div>
         
@@ -261,13 +397,20 @@ const Calendar = () => {
             })}
           </div>
         ) : (
-          <div style={{ textAlign: 'center', padding: 'var(--spacing-lg)', opacity: 0.7 }}>
-            <p>No tasks scheduled for this day.</p>
+          <div style={{ textAlign: 'center', padding: 'var(--spacing-lg)', opacity: 0.8 }}>
+            <div style={{ fontSize: '32px', marginBottom: '10px' }}>📅</div>
+            <p>No tasks scheduled for {format(selectedDate, 'MMMM d')}.</p>
             <button 
               className="btn btn-primary mt-md"
               onClick={() => setShowAddTaskModal(true)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+                margin: '15px auto 0'
+              }}
             >
-              Schedule a Task
+              <span>+</span> Schedule a Task
             </button>
           </div>
         )}
@@ -489,9 +632,24 @@ const ScheduleTaskModal = ({ selectedDate, onClose }) => {
         </button>
         
         <div style={{ padding: 'var(--spacing-lg)' }}>
-          <h2 style={{ marginBottom: 'var(--spacing-md)' }}>
-            {isRecurring ? 'Add Recurring Task' : `Schedule Task for ${format(selectedDate, 'MMMM d, yyyy')}`}
+          <h2 style={{ marginBottom: 'var(--spacing-sm)' }}>
+            {isRecurring ? 'Add Recurring Task' : `Schedule Task`}
           </h2>
+          {!isRecurring && (
+            <div style={{ 
+              marginBottom: 'var(--spacing-md)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '8px 12px',
+              backgroundColor: 'rgba(99, 102, 241, 0.1)', 
+              borderRadius: 'var(--border-radius-md)',
+              width: 'fit-content'
+            }}>
+              <span style={{ fontSize: '18px' }}>📅</span>
+              <span>{format(selectedDate, 'EEEE, MMMM d, yyyy')}</span>
+            </div>
+          )}
           
           <div style={{ 
             display: 'flex', 

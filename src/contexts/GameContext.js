@@ -30,6 +30,12 @@ const STATS = [
     icon: '💪'
   },
   {
+    id: 'agility',
+    name: 'Agility',
+    description: 'Flexibility, balance, coordination, mobility',
+    icon: '🤸'
+  },
+  {
     id: 'intelligence',
     name: 'Intelligence',
     description: 'Learning, problem-solving, mental growth',
@@ -243,7 +249,107 @@ const gameReducer = (state, action) => {
       return initialState;
       
     case 'IMPORT_GAME_STATE':
-      return action.payload;
+      // Handle potential missing stats when importing state (for the new agility stat)
+      const payload = action.payload;
+      
+      // Check if any stats are missing in the imported state
+      STATS.forEach(stat => {
+        if (!payload.stats[stat.id]) {
+          payload.stats[stat.id] = {
+            level: 1,
+            points: 0,
+            lifetimePoints: 0,
+            history: []
+          };
+        }
+      });
+      
+      return payload;
+      
+    case 'INCREMENT_STAT': {
+      const { statId, amount = 1 } = action.payload;
+      const statState = state.stats[statId];
+      
+      if (!statState) return state;
+      
+      let newPoints = statState.points + amount;
+      let newLevel = statState.level;
+      let newLifetimePoints = (statState.lifetimePoints || 0) + amount;
+      
+      // Check for level up
+      while (newPoints >= getPointsToNextLevel(newLevel)) {
+        newPoints -= getPointsToNextLevel(newLevel);
+        newLevel += 1;
+      }
+      
+      // Add to stat history
+      const today = format(new Date(), 'yyyy-MM-dd');
+      
+      return {
+        ...state,
+        stats: {
+          ...state.stats,
+          [statId]: {
+            ...statState,
+            points: newPoints,
+            level: newLevel,
+            lifetimePoints: newLifetimePoints,
+            history: [...statState.history, {
+              date: today,
+              points: amount,
+              task: 'Manual adjustment'
+            }]
+          }
+        }
+      };
+    }
+      
+    case 'DECREMENT_STAT': {
+      const { statId, amount = 1 } = action.payload;
+      const statState = state.stats[statId];
+      
+      if (!statState) return state;
+      
+      // Calculate new points and level
+      let newPoints = statState.points - amount;
+      let newLevel = statState.level;
+      let newLifetimePoints = statState.lifetimePoints;
+      
+      // Handle level down if points go negative
+      while (newPoints < 0 && newLevel > 1) {
+        newLevel -= 1;
+        newPoints += getPointsToNextLevel(newLevel);
+      }
+      
+      // Don't allow points to go below 0 at level 1
+      if (newLevel === 1 && newPoints < 0) {
+        newPoints = 0;
+      }
+      
+      // Don't allow lifetime points to go below 0
+      newLifetimePoints = Math.max(0, newLifetimePoints - amount);
+      
+      // Add to stat history
+      const today = format(new Date(), 'yyyy-MM-dd');
+      
+      return {
+        ...state,
+        stats: {
+          ...state.stats,
+          [statId]: {
+            ...statState,
+            points: newPoints,
+            level: newLevel,
+            lifetimePoints: newLifetimePoints,
+            history: [...statState.history, {
+              date: today,
+              points: -amount,
+              task: 'Manual adjustment'
+            }]
+          }
+        }
+      };
+    }
       
     default:
       return state;
@@ -304,30 +410,61 @@ export const GameProvider = ({ children }) => {
               });
             }
             
+            // Check if the new agility stat needs to be added
+            if (!gameState.stats.agility) {
+              console.log("Adding new Agility stat to user data");
+              gameState.stats.agility = {
+                level: 1,
+                points: 0,
+                lifetimePoints: 0,
+                history: []
+              };
+              
+              needsMigration = true;
+            }
+            
             // Perform migration if needed
             if (needsMigration) {
-              console.log("Migrating data to include lifetimePoints");
+              console.log("Migrating data to include lifetimePoints and new stats");
               
               // Calculate lifetime points for all stats
               if (gameState.taskHistory && gameState.taskHistory.length > 0) {
-                Object.keys(gameState.stats).forEach(statId => {
-                  const statTasks = gameState.taskHistory.filter(task => task.statId === statId);
+                STATS.forEach(stat => {
+                  // Ensure the stat exists
+                  if (!gameState.stats[stat.id]) {
+                    gameState.stats[stat.id] = {
+                      level: 1,
+                      points: 0,
+                      history: []
+                    };
+                  }
+                  
+                  const statTasks = gameState.taskHistory.filter(task => task.statId === stat.id);
                   const totalPoints = statTasks.reduce((sum, task) => sum + (task.points || 0), 0);
                   
-                  gameState.stats[statId].lifetimePoints = totalPoints;
+                  gameState.stats[stat.id].lifetimePoints = totalPoints;
                 });
               } else {
                 // If no task history, approximate based on levels
-                Object.keys(gameState.stats).forEach(statId => {
-                  const stat = gameState.stats[statId];
-                  let approximateLifetimePoints = stat.points || 0;
+                STATS.forEach(stat => {
+                  // Ensure the stat exists
+                  if (!gameState.stats[stat.id]) {
+                    gameState.stats[stat.id] = {
+                      level: 1,
+                      points: 0,
+                      history: []
+                    };
+                  }
+                  
+                  const statData = gameState.stats[stat.id];
+                  let approximateLifetimePoints = statData.points || 0;
                   
                   // Add points for each level achieved
-                  for (let lvl = 1; lvl < stat.level; lvl++) {
+                  for (let lvl = 1; lvl < statData.level; lvl++) {
                     approximateLifetimePoints += getPointsToNextLevel(lvl);
                   }
                   
-                  gameState.stats[statId].lifetimePoints = approximateLifetimePoints;
+                  gameState.stats[stat.id].lifetimePoints = approximateLifetimePoints;
                 });
               }
               

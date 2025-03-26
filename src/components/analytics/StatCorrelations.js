@@ -5,6 +5,7 @@ import {
 } from 'recharts';
 import { useAnalyticsContext } from '../../contexts/AnalyticsContext';
 import { useGame } from '../../contexts/GameContext';
+import { useTheme } from '../../contexts/ThemeContext';
 import { 
   RiGitMergeLine, 
   RiInformationLine, 
@@ -14,7 +15,6 @@ import {
   RiArrowDownLine,
   RiQuestionLine
 } from 'react-icons/ri';
-import ColorTheme from '../../styles/ColorTheme';
 
 /**
  * StatCorrelations Component
@@ -25,6 +25,7 @@ import ColorTheme from '../../styles/ColorTheme';
 const StatCorrelations = ({ showTitle = false }) => {
   const { statCorrelations, rawStats } = useAnalyticsContext();
   const { stats } = useGame();
+  const { theme } = useTheme();
   const [selectedStats, setSelectedStats] = useState(null);
   
   // Animation configuration for charts
@@ -36,13 +37,13 @@ const StatCorrelations = ({ showTitle = false }) => {
   
   // Enhanced colors with semantic meaning
   const colors = {
-    veryStrong: '#4338ca', // Indigo-700 - Very strong correlation 
-    strong: '#6366f1',     // Indigo-500 - Strong correlation
-    moderate: '#0ea5e9',   // Sky-500 - Moderate correlation
-    weak: '#10b981',       // Emerald-500 - Weak correlation 
-    veryWeak: '#d1d5db',   // Gray-300 - Very weak/no correlation
-    positive: ColorTheme.chart.positive, // Green - Positive correlation
-    negative: ColorTheme.chart.negative, // Red - Negative correlation
+    veryStrong: theme.primary,
+    strong: `${theme.primary}d0`,
+    moderate: `${theme.primary}a0`,
+    weak: `${theme.primary}70`,
+    veryWeak: `${theme.border}`,
+    positive: theme.success,
+    negative: theme.danger,
   };
   
   // Helper function to get color based on correlation strength
@@ -57,11 +58,11 @@ const StatCorrelations = ({ showTitle = false }) => {
   
   // Helper function to get direction icon
   const getDirectionIcon = (correlation) => {
-    if (correlation > 0.6) return <RiArrowUpLine className="text-green-600" />;
-    if (correlation < -0.6) return <RiArrowDownLine className="text-red-600" />;
-    if (correlation > 0) return <RiArrowUpLine className="text-gray-400" />;
-    if (correlation < 0) return <RiArrowDownLine className="text-gray-400" />;
-    return <RiQuestionLine className="text-gray-400" />;
+    if (correlation > 0.6) return <RiArrowUpLine style={{ color: theme.success }} />;
+    if (correlation < -0.6) return <RiArrowDownLine style={{ color: theme.danger }} />;
+    if (correlation > 0) return <RiArrowUpLine style={{ color: 'currentColor', opacity: 0.5 }} />;
+    if (correlation < 0) return <RiArrowDownLine style={{ color: 'currentColor', opacity: 0.5 }} />;
+    return <RiQuestionLine style={{ color: 'currentColor', opacity: 0.5 }} />;
   };
   
   // Prepare data for the correlation matrix
@@ -160,14 +161,14 @@ const StatCorrelations = ({ showTitle = false }) => {
     const directionIcon = getDirectionIcon(data.z);
     
     return (
-      <div className="bg-white p-4 shadow-lg rounded-lg border border-gray-200">
-        <p className="font-semibold text-gray-800 mb-2 flex items-center">
+      <div style={{ backgroundColor: theme.card, padding: '16px', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)', border: `1px solid ${theme.border}` }}>
+        <p className="font-semibold mb-2 flex items-center">
           {data.x} & {data.y} Relationship
         </p>
         <div className="space-y-2">
           <div className="flex items-center">
             <span className="text-sm w-24">Correlation:</span>
-            <span className={`font-medium ${data.z > 0 ? 'text-green-600' : data.z < 0 ? 'text-red-600' : 'text-gray-600'}`}>
+            <span className="font-medium" style={{ color: data.z > 0 ? theme.success : data.z < 0 ? theme.danger : theme.text }}>
               {data.z.toFixed(2)} {directionIcon}
             </span>
           </div>
@@ -195,7 +196,7 @@ const StatCorrelations = ({ showTitle = false }) => {
     const data = payload[0].payload;
     
     return (
-      <div className="bg-white p-3 shadow-lg rounded-lg border border-gray-200">
+      <div style={{ backgroundColor: theme.card, padding: '12px', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)', border: `1px solid ${theme.border}` }}>
         <p className="font-medium">{selectedStats.x} vs {selectedStats.y}</p>
         <p className="text-sm mt-1">
           {selectedStats.x}: <span className="font-medium">{data.x.toFixed(1)}</span>
@@ -211,19 +212,19 @@ const StatCorrelations = ({ showTitle = false }) => {
   const hasCorrelationData = statCorrelations && statCorrelations.length > 0;
   
   return (
-    <div className="bg-white rounded-lg shadow p-4 mb-6 border border-gray-100 transition-all duration-300 hover:shadow-md">
+    <div className="card mb-6 transition-all duration-300">
       <div>
         <h2 className="text-xl font-semibold flex items-center">
-          <RiGitMergeLine className="mr-2 h-6 w-6 text-gray-700" />
+          <RiGitMergeLine className="mr-2 h-6 w-6" style={{ color: theme.primary }} />
           Stat Correlations
-          {!showTitle && <span className="ml-2 text-xs text-gray-500 font-normal">How stats influence each other</span>}
+          {!showTitle && <span className="ml-2 text-xs opacity-70 font-normal">How stats influence each other</span>}
         </h2>
-        <p className="text-xs text-gray-500 mb-3">Using raw stat points for more granular analysis</p>
+        <p className="text-xs opacity-70 mb-3">Using raw stat points for more granular analysis</p>
       </div>
       
       {!hasCorrelationData ? (
-        <div className="p-10 text-center text-gray-500">
-          <RiInformationLine className="mx-auto mb-2 h-10 w-10" />
+        <div className="p-10 text-center">
+          <RiInformationLine className="mx-auto mb-2 h-10 w-10 opacity-50" />
           <p>Not enough data to analyze stat correlations yet.</p>
           <p className="text-sm mt-2">Complete more tasks that develop multiple stats to see correlations!</p>
         </div>
@@ -231,14 +232,14 @@ const StatCorrelations = ({ showTitle = false }) => {
         <div className="space-y-6">
           <div className="transition-all duration-300">
             <h3 className="text-lg font-medium mb-2 flex items-center">
-              <RiGitMergeLine className="mr-2 h-5 w-5 text-gray-600" />
+              <RiGitMergeLine className="mr-2 h-5 w-5" style={{ color: theme.primary }} />
               Correlation Matrix
             </h3>
-            <p className="text-sm text-gray-600 mb-3">
+            <p className="text-sm opacity-70 mb-3">
               This chart shows how your different stats relate to each other. Bigger and darker bubbles indicate stronger relationships.
             </p>
             
-            <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+            <div className="card p-4">
               <ResponsiveContainer width="100%" height={400}>
                 <ScatterChart
                   margin={{ top: 20, right: 20, bottom: 20, left: 20 }}
@@ -246,25 +247,26 @@ const StatCorrelations = ({ showTitle = false }) => {
                 >
                   <CartesianGrid 
                     strokeDasharray="3 3" 
-                    stroke={ColorTheme.chart.gridLines}
+                    stroke={theme.border}
+                    opacity={0.5}
                   />
                   <XAxis 
                     dataKey="x" 
                     type="category" 
                     name="Stat A" 
                     allowDuplicatedCategory={false}
-                    tick={{ fill: '#4b5563' }}
-                    tickLine={{ stroke: '#6b7280' }}
-                    axisLine={{ stroke: '#9ca3af' }}
+                    tick={{ fill: theme.text }}
+                    tickLine={{ stroke: theme.border }}
+                    axisLine={{ stroke: theme.border }}
                   />
                   <YAxis 
                     dataKey="y" 
                     type="category" 
                     name="Stat B" 
                     allowDuplicatedCategory={false}
-                    tick={{ fill: '#4b5563' }}
-                    tickLine={{ stroke: '#6b7280' }}
-                    axisLine={{ stroke: '#9ca3af' }}
+                    tick={{ fill: theme.text }}
+                    tickLine={{ stroke: theme.border }}
+                    axisLine={{ stroke: theme.border }}
                   />
                   <ZAxis 
                     dataKey="z" 
@@ -323,49 +325,42 @@ const StatCorrelations = ({ showTitle = false }) => {
                   <RiArrowRightLine className="mx-2 h-4 w-4" />
                   {selectedStats.y}
                 </div>
-                <span className="ml-2 text-sm font-normal text-gray-500">Relationship</span>
+                <span className="ml-2 text-sm font-normal opacity-70">Relationship</span>
               </h3>
               
-              <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+              <div className="card p-4">
                 <ResponsiveContainer width="100%" height={300}>
                   <ScatterChart
                     margin={{ top: 20, right: 20, bottom: 20, left: 20 }}
                     {...animationConfig}
                   >
-                    <CartesianGrid strokeDasharray="3 3" stroke={ColorTheme.chart.gridLines} />
+                    <CartesianGrid strokeDasharray="3 3" stroke={theme.border} opacity={0.5} />
                     <XAxis 
                       type="number" 
                       dataKey="x" 
                       name={selectedStats.statX} 
                       unit=" pts"
-                      tick={{ fill: '#4b5563' }}
-                      tickLine={{ stroke: '#6b7280' }}
+                      tick={{ fill: theme.text }}
+                      tickLine={{ stroke: theme.border }}
                     />
                     <YAxis 
                       type="number" 
                       dataKey="y" 
                       name={selectedStats.statY} 
                       unit=" pts"
-                      tick={{ fill: '#4b5563' }}
-                      tickLine={{ stroke: '#6b7280' }}
+                      tick={{ fill: theme.text }}
+                      tickLine={{ stroke: theme.border }}
                     />
                     <Tooltip content={<CustomScatterTooltip />} />
                     <Scatter 
                       name={`${selectedStats.x} vs ${selectedStats.y}`} 
                       data={getScatterData()} 
-                      fill={colors.strong}
-                    >
-                      {getScatterData().map((entry, index) => (
-                        <Cell 
-                          key={`point-${index}`} 
-                          fill={selectedStats.z > 0 ? colors.positive : colors.negative}
-                        />
-                      ))}
-                    </Scatter>
+                      fill={selectedStats.z > 0 ? colors.positive : colors.negative}
+                    />
                   </ScatterChart>
                 </ResponsiveContainer>
                 
-                <div className="mt-3 text-sm text-gray-700 bg-white p-3 rounded border border-gray-200">
+                <div className="mt-3 card p-3">
                   <p className="font-medium mb-1">What does this mean?</p>
                   {selectedStats.z > 0.6 && (
                     <p>There's a strong positive relationship between these stats. When you improve one, the other tends to improve too!</p>
@@ -386,8 +381,9 @@ const StatCorrelations = ({ showTitle = false }) => {
               </div>
               
               <button
-                className="mt-3 text-indigo-600 text-sm hover:underline flex items-center"
+                className="mt-3 text-sm flex items-center hover:opacity-80 transition-opacity"
                 onClick={() => setSelectedStats(null)}
+                style={{ color: theme.primary }}
               >
                 <RiArrowLeftLine className="mr-1 h-4 w-4" />
                 Back to correlation matrix
@@ -395,9 +391,9 @@ const StatCorrelations = ({ showTitle = false }) => {
             </div>
           )}
           
-          <div className="text-sm text-gray-600 mt-4 bg-blue-50 p-3 rounded-lg border border-blue-100">
+          <div className="mt-4 text-sm p-3 rounded-lg card" style={{ backgroundColor: `${theme.primary}10` }}>
             <div className="flex items-start">
-              <RiInformationLine className="h-5 w-5 mr-2 text-blue-500 mt-0.5" />
+              <RiInformationLine className="h-5 w-5 mr-2 mt-0.5" style={{ color: theme.primary }} />
               <div>
                 <p><strong>What are correlations?</strong> Correlations show how your different stat areas relate to each other.</p>
                 <p className="mt-1"><strong>How to use this:</strong> Identify synergies between stats to optimize your growth. If two stats have a strong positive correlation, tasks that improve one will likely boost the other too!</p>
