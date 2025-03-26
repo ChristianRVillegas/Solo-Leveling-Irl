@@ -18,9 +18,14 @@ const Dashboard = () => {
     streak,
     getStreakBonus,
     getTodaysTasks,
-    completedTasks
+    completedTasks,
+    dispatch
   } = useGame();
   const { theme } = useTheme();
+  const [customStat, setCustomStat] = useState(null);
+  const [customAmount, setCustomAmount] = useState(1);
+  const [longPressTimer, setLongPressTimer] = useState(null);
+  const [showInput, setShowInput] = useState(false);
   
   const todaysTasks = getTodaysTasks();
   const streakBonus = streak.current >= 3 ? getStreakBonus(streak.current) * 100 : 0;
@@ -30,6 +35,89 @@ const Dashboard = () => {
     todaysTasks.some(task => task.statId === stat.id)
   );
   const allStatsHaveTasks = statsWithTasksToday.length === STATS.length;
+  
+  // Handle custom amount submission
+  const handleCustomSubmit = () => {
+    if (customStat && customAmount) {
+      // Convert to number and ensure it's positive
+      const amount = Math.abs(parseInt(customAmount, 10) || 0);
+      
+      if (amount > 0) {
+        dispatch({
+          type: 'INCREMENT_STAT',
+          payload: { statId: customStat, amount }
+        });
+        
+        // Reset custom adjustment
+        setCustomStat(null);
+        setCustomAmount(1);
+      }
+    }
+  };
+  
+  // Handle custom amount decrement
+  const handleCustomDecrement = () => {
+    if (customStat && customAmount) {
+      // Convert to number and ensure it's positive
+      const amount = Math.abs(parseInt(customAmount, 10) || 0);
+      
+      if (amount > 0) {
+        dispatch({
+          type: 'DECREMENT_STAT',
+          payload: { statId: customStat, amount }
+        });
+        
+        // Reset custom adjustment
+        setCustomStat(null);
+        setCustomAmount(1);
+      }
+    }
+  };
+  
+  // Handle cancel of custom adjustment
+  const handleCancelCustom = () => {
+    setCustomStat(null);
+    setCustomAmount(1);
+    setShowInput(false);
+  };
+  
+  // Long press handlers
+  const handleMouseDown = (statId) => {
+    setCustomStat(statId);
+    // Start a timer for 600ms to detect long press
+    const timer = setTimeout(() => {
+      setShowInput(true);
+    }, 600);
+    setLongPressTimer(timer);
+  };
+  
+  const handleMouseUp = () => {
+    // Clear the timer if mouse is released before the long press is triggered
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      setLongPressTimer(null);
+    }
+    // If we're not showing the input, it was a short click, so process it as a +1
+    if (!showInput && customStat) {
+      dispatch({
+        type: 'INCREMENT_STAT',
+        payload: { statId: customStat, amount: 1 }
+      });
+      setCustomStat(null);
+    }
+  };
+  
+  // Handle mouse leave to prevent timer from continuing if cursor moves away
+  const handleMouseLeave = () => {
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      setLongPressTimer(null);
+    }
+    // Only clear the custom stat if we're not showing the input
+    if (!showInput) {
+      setCustomStat(null);
+    }
+  };
   
   return (
     <div className="animate-fade-in">
@@ -149,11 +237,40 @@ const Dashboard = () => {
           )}
         </div>
         
+        <div style={{ 
+          marginBottom: 'var(--spacing-md)', 
+          backgroundColor: 'rgba(255, 255, 255, 0.05)', 
+          padding: 'var(--spacing-sm) var(--spacing-md)', 
+          borderRadius: 'var(--border-radius-md)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between'
+        }}>
+          <div>
+            <span style={{ fontWeight: 'bold' }}>Quick Stat Adjustment</span>
+            <p style={{ margin: 0, fontSize: '0.85rem', opacity: 0.8 }}>Use the +/- buttons to adjust stats. Hold the + button for a few seconds to add a custom amount.</p>
+          </div>
+          <Link 
+            to="/stats" 
+            style={{ 
+              color: theme.primary, 
+              textDecoration: 'none',
+              fontSize: '0.9rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px'
+            }}
+          >
+            View Stats <span>→</span>
+          </Link>
+        </div>
+        
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
           {STATS.map(stat => {
             const statData = stats[stat.id];
             const tasksToday = todaysTasks.filter(task => task.statId === stat.id);
             const hasTasksToday = tasksToday.length > 0;
+            const isCustomStat = customStat === stat.id;
             
             return (
               <div 
@@ -170,6 +287,55 @@ const Dashboard = () => {
                     <h3 style={{ margin: 0 }}>{stat.name}</h3>
                     <div className="text-sm">Level {statData.level}</div>
                   </div>
+                  
+                  {/* Quick stat adjustment buttons */}
+                  <div style={{ marginLeft: 'auto', display: 'flex', gap: '4px' }}>
+                    <button 
+                      onClick={() => dispatch({ 
+                        type: 'DECREMENT_STAT', 
+                        payload: { statId: stat.id, amount: 1 } 
+                      })}
+                      style={{
+                        width: '24px',
+                        height: '24px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backgroundColor: 'rgba(255, 100, 100, 0.2)',
+                        borderRadius: 'var(--border-radius-sm)',
+                        border: 'none',
+                        cursor: 'pointer',
+                        color: theme.text,
+                        fontWeight: 'bold'
+                      }}
+                      title="Decrease 1 point"
+                    >
+                      -
+                    </button>
+                    <button 
+                      onMouseDown={() => handleMouseDown(stat.id)}
+                      onMouseUp={handleMouseUp}
+                      onMouseLeave={handleMouseLeave}
+                      onTouchStart={() => handleMouseDown(stat.id)} 
+                      onTouchEnd={handleMouseUp}
+                      style={{
+                        width: '24px',
+                        height: '24px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backgroundColor: 'rgba(100, 255, 100, 0.2)',
+                        borderRadius: 'var(--border-radius-sm)',
+                        border: 'none',
+                        cursor: 'pointer',
+                        color: theme.text,
+                        fontWeight: 'bold'
+                      }}
+                      title="Add 1 point (hold for custom amount)"
+                    >
+                      +
+                    </button>
+                  </div>
                 </div>
                 
                 <div className="progress-bar">
@@ -184,6 +350,75 @@ const Dashboard = () => {
                 
                 <div className="flex justify-between text-sm">
                   <span>{statData.points} / {getPointsToNextLevel(statData.level)} points</span>
+                  
+                  {/* Custom input that appears after long-press */}
+                  {showInput && customStat === stat.id && (
+                    <div className="flex gap-1">
+                      <input
+                        type="number"
+                        value={customAmount}
+                        onChange={(e) => setCustomAmount(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            handleCustomSubmit();
+                          } else if (e.key === 'Escape') {
+                            handleCancelCustom();
+                          }
+                        }}
+                        min="1"
+                        style={{
+                          width: '50px',
+                          backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                          border: '1px solid ' + theme.border,
+                          borderRadius: 'var(--border-radius-sm)',
+                          padding: '2px 4px',
+                          fontSize: '0.75rem',
+                          color: theme.text,
+                          textAlign: 'center'
+                        }}
+                        autoFocus
+                      />
+                      <button
+                        onClick={handleCustomSubmit}
+                        className="text-xs"
+                        style={{
+                          backgroundColor: 'rgba(100, 255, 100, 0.15)',
+                          border: 'none',
+                          borderRadius: 'var(--border-radius-sm)',
+                          padding: '0 4px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Add
+                      </button>
+                      <button
+                        onClick={handleCustomDecrement}
+                        className="text-xs"
+                        style={{
+                          backgroundColor: 'rgba(255, 100, 100, 0.15)',
+                          border: 'none',
+                          borderRadius: 'var(--border-radius-sm)',
+                          padding: '0 4px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Sub
+                      </button>
+                      <button
+                        onClick={handleCancelCustom}
+                        className="text-xs"
+                        style={{
+                          backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                          border: 'none',
+                          borderRadius: 'var(--border-radius-sm)',
+                          padding: '0 4px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  )}
                 </div>
                 
                 {hasTasksToday ? (

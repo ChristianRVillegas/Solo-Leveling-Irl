@@ -266,6 +266,91 @@ const gameReducer = (state, action) => {
       
       return payload;
       
+    case 'INCREMENT_STAT': {
+      const { statId, amount = 1 } = action.payload;
+      const statState = state.stats[statId];
+      
+      if (!statState) return state;
+      
+      let newPoints = statState.points + amount;
+      let newLevel = statState.level;
+      let newLifetimePoints = (statState.lifetimePoints || 0) + amount;
+      
+      // Check for level up
+      while (newPoints >= getPointsToNextLevel(newLevel)) {
+        newPoints -= getPointsToNextLevel(newLevel);
+        newLevel += 1;
+      }
+      
+      // Add to stat history
+      const today = format(new Date(), 'yyyy-MM-dd');
+      
+      return {
+        ...state,
+        stats: {
+          ...state.stats,
+          [statId]: {
+            ...statState,
+            points: newPoints,
+            level: newLevel,
+            lifetimePoints: newLifetimePoints,
+            history: [...statState.history, {
+              date: today,
+              points: amount,
+              task: 'Manual adjustment'
+            }]
+          }
+        }
+      };
+    }
+      
+    case 'DECREMENT_STAT': {
+      const { statId, amount = 1 } = action.payload;
+      const statState = state.stats[statId];
+      
+      if (!statState) return state;
+      
+      // Calculate new points and level
+      let newPoints = statState.points - amount;
+      let newLevel = statState.level;
+      let newLifetimePoints = statState.lifetimePoints;
+      
+      // Handle level down if points go negative
+      while (newPoints < 0 && newLevel > 1) {
+        newLevel -= 1;
+        newPoints += getPointsToNextLevel(newLevel);
+      }
+      
+      // Don't allow points to go below 0 at level 1
+      if (newLevel === 1 && newPoints < 0) {
+        newPoints = 0;
+      }
+      
+      // Don't allow lifetime points to go below 0
+      newLifetimePoints = Math.max(0, newLifetimePoints - amount);
+      
+      // Add to stat history
+      const today = format(new Date(), 'yyyy-MM-dd');
+      
+      return {
+        ...state,
+        stats: {
+          ...state.stats,
+          [statId]: {
+            ...statState,
+            points: newPoints,
+            level: newLevel,
+            lifetimePoints: newLifetimePoints,
+            history: [...statState.history, {
+              date: today,
+              points: -amount,
+              task: 'Manual adjustment'
+            }]
+          }
+        }
+      };
+    }
+      
     default:
       return state;
   }
