@@ -2,7 +2,11 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useGame } from '../contexts/GameContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
+import { useFriend } from '../contexts/FriendContext';
 import { format, differenceInDays } from 'date-fns';
+import { useNavigate } from 'react-router-dom';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../firebase/config';
 import {
   RadarChart,
   PolarGrid,
@@ -37,11 +41,14 @@ const Profile = () => {
   } = useGame();
   const { theme } = useTheme();
   const { currentUser } = useAuth();
+  const { friends } = useFriend();
+  const navigate = useNavigate();
   const [selectedStatFilter, setSelectedStatFilter] = useState('all');
   const [isEditingPicture, setIsEditingPicture] = useState(false);
   const [selectedAvatar, setSelectedAvatar] = useState(profilePicture);
   const [selectedTitle, setSelectedTitle] = useState(null);
   const [showTitleDropdown, setShowTitleDropdown] = useState(false);
+  const [showFriendsModal, setShowFriendsModal] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState(null);
   const fileInputRef = useRef(null);
@@ -435,7 +442,7 @@ const Profile = () => {
           </div>
 
           {/* Stats Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-md">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-md">
             <div style={{ 
               padding: 'var(--spacing-md)',
               backgroundColor: 'rgba(255, 255, 255, 0.05)',
@@ -464,6 +471,39 @@ const Profile = () => {
             }}>
               <div className="text-sm mb-xs" style={{ opacity: 0.8 }}>Streak</div>
               <div className="text-xl font-bold">🔥 {streak.current} day{streak.current !== 1 ? 's' : ''}</div>
+            </div>
+
+            <div style={{ 
+              padding: 'var(--spacing-md)',
+              backgroundColor: 'rgba(255, 255, 255, 0.05)',
+              borderRadius: 'var(--border-radius-md)',
+              textAlign: 'center'
+            }}>
+              <div className="text-sm mb-xs" style={{ opacity: 0.8 }}>Friends</div>
+              <div 
+                className="text-xl font-bold" 
+                onClick={() => setShowFriendsModal(true)}
+                style={{
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  padding: '4px 8px',
+                  borderRadius: 'var(--border-radius-md)',
+                  transition: 'all 0.2s ease',
+                  backgroundColor: 'rgba(255, 255, 255, 0.03)',
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.03)';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                }}
+              >
+                👥 {friends.length} {friends.length === 1 ? 'friend' : 'friends'}
+              </div>
             </div>
 
             <div style={{ 
@@ -715,6 +755,228 @@ const Profile = () => {
           </div>
         )}
       </section>
+
+      {/* Friends Modal */}
+      {showFriendsModal && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.75)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: 'var(--spacing-md)',
+        }}>
+          <div style={{
+            backgroundColor: theme.card,
+            borderRadius: 'var(--border-radius-lg)',
+            boxShadow: 'var(--shadow-xl)',
+            width: '100%',
+            maxWidth: '600px',
+            maxHeight: '80vh',
+            overflowY: 'auto',
+            position: 'relative',
+          }}>
+            <button 
+              style={{
+                position: 'absolute',
+                top: 'var(--spacing-md)',
+                right: 'var(--spacing-md)',
+                background: 'none',
+                border: 'none',
+                fontSize: '1.5rem',
+                cursor: 'pointer',
+                color: theme.text,
+                opacity: 0.7,
+              }}
+              onClick={() => setShowFriendsModal(false)}
+            >
+              ✕
+            </button>
+            
+            <div style={{ padding: 'var(--spacing-lg)' }}>
+              <div style={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center', 
+                marginBottom: 'var(--spacing-md)' 
+              }}>
+                <h2 style={{ margin: 0 }}>Your Friends</h2>
+                
+                <button 
+                  className="btn btn-primary"
+                  onClick={() => {
+                    setShowFriendsModal(false);
+                    navigate('/social/friends');
+                  }}
+                >
+                  Manage Friends
+                </button>
+              </div>
+              
+              {friends.length > 0 ? (
+                <div className="space-y-md">
+                  {friends.map((friend) => (
+                    <FriendItem 
+                      key={friend.userId} 
+                      friendId={friend.userId} 
+                      friendSince={friend.friendSince}
+                      onClick={() => {
+                        setShowFriendsModal(false);
+                        navigate(`/social/friend/${friend.userId}`);
+                      }}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div style={{ 
+                  textAlign: 'center', 
+                  padding: 'var(--spacing-xl)', 
+                  opacity: 0.8 
+                }}>
+                  <div style={{ fontSize: '48px', marginBottom: '16px' }}>👥</div>
+                  <p>You don't have any friends yet.</p>
+                  <button 
+                    className="btn btn-primary mt-md"
+                    onClick={() => {
+                      setShowFriendsModal(false);
+                      navigate('/social');
+                    }}
+                  >
+                    Find Friends
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+/**
+ * Component to display a single friend item with their basic info
+ */
+const FriendItem = ({ friendId, friendSince, onClick }) => {
+  const { theme } = useTheme();
+  const [friendData, setFriendData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadFriendData = async () => {
+      try {
+        const docRef = doc(db, 'gameStates', friendId);
+        const docSnap = await getDoc(docRef);
+        
+        if (docSnap.exists()) {
+          setFriendData(docSnap.data());
+        }
+      } catch (error) {
+        console.error('Error loading friend data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadFriendData();
+  }, [friendId]);
+
+  if (loading) {
+    return (
+      <div style={{
+        padding: 'var(--spacing-md)',
+        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+        borderRadius: 'var(--border-radius-md)',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 'var(--spacing-md)',
+      }}>
+        <div style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: 'rgba(255, 255, 255, 0.1)' }}></div>
+        <div style={{ flex: 1 }}>
+          <div style={{ height: '18px', width: '120px', backgroundColor: 'rgba(255, 255, 255, 0.1)', borderRadius: '4px', marginBottom: '8px' }}></div>
+          <div style={{ height: '14px', width: '80px', backgroundColor: 'rgba(255, 255, 255, 0.1)', borderRadius: '4px' }}></div>
+        </div>
+      </div>
+    );
+  }
+
+  // Calculate level and rank if friend data exists
+  let level = 1;
+  let rank = 'Beginner';
+  
+  if (friendData && friendData.stats) {
+    const totalLevel = Object.values(friendData.stats).reduce((sum, stat) => sum + stat.level, 0);
+    level = Math.floor(totalLevel / Object.keys(friendData.stats).length);
+    
+    // Get rank based on level (simplified version)
+    const RANKS = [
+      { name: 'Beginner', range: [0, 9] },
+      { name: 'Novice', range: [10, 19] },
+      { name: 'Apprentice', range: [20, 29] },
+      { name: 'Adept', range: [30, 39] },
+      { name: 'Expert', range: [40, 49] },
+      { name: 'Master', range: [50, 59] },
+      { name: 'Grandmaster', range: [60, 69] },
+      { name: 'Legend', range: [70, 79] },
+      { name: 'Mythic', range: [80, 89] },
+      { name: 'Sovereign', range: [90, 99] },
+      { name: 'Transcendent', range: [100, Infinity] }
+    ];
+    
+    for (const rankInfo of RANKS) {
+      if (level >= rankInfo.range[0] && level <= rankInfo.range[1]) {
+        rank = rankInfo.name;
+        break;
+      }
+    }
+  }
+
+  return (
+    <div 
+      style={{
+        padding: 'var(--spacing-md)',
+        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+        borderRadius: 'var(--border-radius-md)',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 'var(--spacing-md)',
+        cursor: 'pointer',
+        transition: 'background-color 0.2s ease',
+      }}
+      onClick={onClick}
+      onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.08)'}
+      onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)'}
+    >
+      <ProfilePicture 
+        size="medium"
+        src={friendData?.profilePicture}
+      />
+      
+      <div style={{ flex: 1 }}>
+        <div style={{ fontWeight: 'bold', fontSize: '1rem' }}>
+          {friendData?.playerName || 'Unknown Player'}
+        </div>
+        <div style={{ fontSize: '0.875rem', opacity: 0.8 }}>
+          Level {level} {rank}
+        </div>
+        <div style={{ fontSize: '0.75rem', marginTop: '4px', opacity: 0.6 }}>
+          Friends since {new Date(friendSince).toLocaleDateString()}
+        </div>
+      </div>
+      
+      <div style={{ 
+        width: '24px', 
+        height: '24px', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center',
+        color: theme.text,
+        opacity: 0.6
+      }}>
+        ❯
+      </div>
     </div>
   );
 };
