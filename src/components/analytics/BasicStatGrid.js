@@ -10,7 +10,7 @@ import { useTheme } from '../../contexts/ThemeContext';
  * Uses a consistent blue color scheme with varying intensities based on point values.
  */
 const BasicStatGrid = () => {
-  const { taskHistory, STATS } = useGame();
+  const { taskHistory, STATS, dispatch } = useGame();
   const { rawStats } = useAnalyticsContext();
   const { theme } = useTheme();
   const [activityData, setActivityData] = useState({});
@@ -32,9 +32,9 @@ const BasicStatGrid = () => {
         return;
       }
       
-      // Format the date for consistent lookup
+      // Format the date for consistent lookup using local timezone
       const taskDate = new Date(task.completedAt);
-      const dateKey = taskDate.toISOString().split('T')[0];
+      const dateKey = formatDateToLocalKey(taskDate);
       
       // Initialize date entry if needed
       if (!data[dateKey]) {
@@ -52,7 +52,7 @@ const BasicStatGrid = () => {
     
     setActivityData(data);
   }, [taskHistory]);
-  
+
   // Get the last 30 days
   const getLast30Days = () => {
     const days = [];
@@ -64,7 +64,6 @@ const BasicStatGrid = () => {
       date.setHours(0, 0, 0, 0); // Normalize to start of day
       days.push(date);
     }
-    
     return days;
   };
   
@@ -74,6 +73,14 @@ const BasicStatGrid = () => {
       month: 'short',
       day: 'numeric'
     });
+  };
+  
+  // Helper to format date to a local-timezone based key in YYYY-MM-DD format
+  const formatDateToLocalKey = (date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   };
   
   // Get cell background style based on points
@@ -98,13 +105,32 @@ const BasicStatGrid = () => {
     else if (points <= 12) intensity = 0.8; // Dark shade
     else intensity = 1.0;                   // Darkest shade
     
+    // Instead of using opacity which can have issues with rendering,
+    // create a rgba color with the intensity factored in
+    const baseColorRgb = hexToRgb(baseColor) || { r: 99, g: 102, b: 241 }; // Default to indigo if conversion fails
+    
     return {
-      backgroundColor: baseColor,
-      opacity: intensity,
+      backgroundColor: `rgba(${baseColorRgb.r}, ${baseColorRgb.g}, ${baseColorRgb.b}, ${intensity})`,
       border: `1px solid ${baseColor}`,
       width: '20px',
       height: '20px',
       cursor: 'pointer'
+    };
+  };
+  
+  // Helper function to convert hex color to RGB
+  const hexToRgb = (hex) => {
+    // Remove # if present
+    hex = hex.replace(/^#/, '');
+    
+    // Parse hex value
+    const bigint = parseInt(hex, 16);
+    if (isNaN(bigint)) return null;
+    
+    return {
+      r: (bigint >> 16) & 255,
+      g: (bigint >> 8) & 255,
+      b: bigint & 255
     };
   };
   
@@ -223,7 +249,7 @@ const BasicStatGrid = () => {
                     {statName}
                   </td>
                   {days.map((day, index) => {
-                    const dateKey = day.toISOString().split('T')[0];
+                    const dateKey = formatDateToLocalKey(day);
                     const points = activityData[dateKey]?.[stat] || 0;
                     
                     return (
@@ -249,20 +275,24 @@ const BasicStatGrid = () => {
       <div className="flex justify-end items-center my-3">
         <span className="text-xs opacity-70">Fewer</span>
         <div className="flex mx-2">
-          {[0.2, 0.4, 0.6, 0.8, 1].map((opacity, i) => (
-            <div 
-              key={i}
-              style={{
-                width: '14px',
-                height: '14px',
-                backgroundColor: theme.primary,
-                opacity: opacity,
-                marginLeft: i > 0 ? '4px' : 0,
-                border: `1px solid ${theme.border}`,
-                borderRadius: '2px'
-              }}
-            ></div>
-          ))}
+          {[0.2, 0.4, 0.6, 0.8, 1].map((opacity, i) => {
+            // Convert base color to RGB for consistent display
+            const baseColorRgb = hexToRgb(theme.primary) || { r: 99, g: 102, b: 241 };
+            
+            return (
+              <div 
+                key={i}
+                style={{
+                  width: '14px',
+                  height: '14px',
+                  backgroundColor: `rgba(${baseColorRgb.r}, ${baseColorRgb.g}, ${baseColorRgb.b}, ${opacity})`,
+                  marginLeft: i > 0 ? '4px' : 0,
+                  border: `1px solid ${theme.border}`,
+                  borderRadius: '2px'
+                }}
+              ></div>
+            );
+          })}
         </div>
         <span className="text-xs opacity-70">More</span>
       </div>

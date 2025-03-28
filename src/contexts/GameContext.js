@@ -284,6 +284,17 @@ const gameReducer = (state, action) => {
       
       // Add to stat history
       const today = format(new Date(), 'yyyy-MM-dd');
+      const now = new Date().toISOString();
+      
+      // Create a task-like object for taskHistory
+      const manualTask = {
+        id: `manual-${Date.now()}`,
+        name: 'Manual adjustment',
+        statId: statId,
+        points: amount,
+        completedAt: now,
+        type: 'manual'
+      };
       
       return {
         ...state,
@@ -300,7 +311,8 @@ const gameReducer = (state, action) => {
               task: 'Manual adjustment'
             }]
           }
-        }
+        },
+        taskHistory: [...state.taskHistory, manualTask]
       };
     }
       
@@ -331,6 +343,17 @@ const gameReducer = (state, action) => {
       
       // Add to stat history
       const today = format(new Date(), 'yyyy-MM-dd');
+      const now = new Date().toISOString();
+      
+      // Create a task-like object for taskHistory
+      const manualTask = {
+        id: `manual-${Date.now()}`,
+        name: 'Manual decrease',
+        statId: statId,
+        points: -amount, // Negative amount for decreases
+        completedAt: now,
+        type: 'manual'
+      };
       
       return {
         ...state,
@@ -347,7 +370,8 @@ const gameReducer = (state, action) => {
               task: 'Manual adjustment'
             }]
           }
-        }
+        },
+        taskHistory: [...state.taskHistory, manualTask]
       };
     }
       
