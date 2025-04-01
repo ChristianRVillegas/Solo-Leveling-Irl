@@ -87,7 +87,16 @@ const ActivityPatterns = ({ showTitle = false }) => {
         name: week,
         tasks: count,
       }))
-      .sort((a, b) => b.name.localeCompare(a.name)) // Sort by week descending
+      .sort((a, b) => {
+        // Sort weeks chronologically by year and week number
+        const [yearA, weekNumA] = a.name.split('-W').map(part => parseInt(part));
+        const [yearB, weekNumB] = b.name.split('-W').map(part => parseInt(part));
+        
+        // Compare years first
+        if (yearA !== yearB) return yearA - yearB;
+        // Then compare week numbers
+        return weekNumA - weekNumB;
+      })
       .slice(0, 8); // Only show the last 8 weeks
   };
   
@@ -103,9 +112,15 @@ const ActivityPatterns = ({ showTitle = false }) => {
           fullName: new Date(year, monthNum - 1, 1).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
           tasks: count,
           timestamp: new Date(year, monthNum - 1, 1).getTime(), // For sorting
+          yearNum: parseInt(year),
+          monthNum: parseInt(monthNum)
         };
       })
-      .sort((a, b) => b.timestamp - a.timestamp) // Sort by month descending
+      .sort((a, b) => {
+        // Sort by year and month in ascending order (oldest first)
+        if (a.yearNum !== b.yearNum) return a.yearNum - b.yearNum;
+        return a.monthNum - b.monthNum;
+      })
       .slice(0, 6); // Only show the last 6 months
   };
   

@@ -42,6 +42,30 @@ export const AnalyticsProvider = ({ children }) => {
   const [goalProgress, setGoalProgress] = useState([]);
   const [insights, setInsights] = useState([]);
   
+  // Helper function to convert date to local timezone key
+  const formatDateToLocalKey = (date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+  
+  // Helper function to safely extract points from various task formats
+  const extractTaskPoints = (task, statType) => {
+    // Direct statId and points format
+    if (task.statId === statType && (task.points || task.points === 0)) {
+      return task.points;
+    }
+    
+    // Rewards.stats format
+    if (task.rewards && task.rewards.stats && 
+        (task.rewards.stats[statType] || task.rewards.stats[statType] === 0)) {
+      return task.rewards.stats[statType];
+    }
+    
+    return 0; // Default if no points found
+  };
+  
   // Calculate activity patterns (most active times/days)
   useEffect(() => {
     if (!taskHistory || taskHistory.length === 0) return;
@@ -81,9 +105,12 @@ export const AnalyticsProvider = ({ children }) => {
   useEffect(() => {
     if (!taskHistory || taskHistory.length === 0) return;
     
-    // Group task history by date
+    // Group task history by date (using local timezone)
     const tasksByDate = taskHistory.reduce((acc, task) => {
-      const dateKey = new Date(task.completedAt).toISOString().split('T')[0];
+      // Skip tasks without completion date
+      if (!task.completedAt) return acc;
+      
+      const dateKey = formatDateToLocalKey(new Date(task.completedAt));
       if (!acc[dateKey]) acc[dateKey] = [];
       acc[dateKey].push(task);
       return acc;
@@ -95,11 +122,14 @@ export const AnalyticsProvider = ({ children }) => {
       
       // Sum up stat changes for each stat type on this day
       tasksByDate[date].forEach(task => {
-        if (task.rewards && task.rewards.stats) {
-          Object.entries(task.rewards.stats).forEach(([statType, value]) => {
-            dailyStats[statType] = (dailyStats[statType] || 0) + value;
-          });
-        }
+        // Process each stat type for this task
+        Object.keys(stats).forEach(statType => {
+          // Use the helper function to extract points
+          const points = extractTaskPoints(task, statType);
+          if (points !== 0) {
+            dailyStats[statType] = (dailyStats[statType] || 0) + points;
+          }
+        });
       });
       
       return dailyStats;
@@ -188,7 +218,13 @@ export const AnalyticsProvider = ({ children }) => {
     
     // Process task history for stats
     taskHistory.forEach(task => {
+      // Skip tasks without completion date
+      if (!task.completedAt) return;
+      
       const taskDate = new Date(task.completedAt);
+      
+      // Use local timezone for date calculations
+      const dateKey = formatDateToLocalKey(taskDate);
       const weekNumber = getWeekNumber(taskDate);
       const weekKey = `${taskDate.getFullYear()}-W${weekNumber}`;
       const monthKey = `${taskDate.getFullYear()}-${taskDate.getMonth() + 1}`;
@@ -197,28 +233,26 @@ export const AnalyticsProvider = ({ children }) => {
       if (weekly[weekKey]) {
         weekly[weekKey].tasks.completed++;
         
-        // Add stat gains
-        if (task.rewards && task.rewards.stats) {
-          Object.entries(task.rewards.stats).forEach(([statType, value]) => {
-            if (weekly[weekKey].stats[statType] !== undefined) {
-              weekly[weekKey].stats[statType] += value;
-            }
-          });
-        }
+        // Process each stat type using the helper function
+        Object.keys(weekly[weekKey].stats).forEach(statType => {
+          const points = extractTaskPoints(task, statType);
+          if (points !== 0 && weekly[weekKey].stats[statType] !== undefined) {
+            weekly[weekKey].stats[statType] += points;
+          }
+        });
       }
       
       // Update monthly data if the month exists in our report
       if (monthly[monthKey]) {
         monthly[monthKey].tasks.completed++;
         
-        // Add stat gains
-        if (task.rewards && task.rewards.stats) {
-          Object.entries(task.rewards.stats).forEach(([statType, value]) => {
-            if (monthly[monthKey].stats[statType] !== undefined) {
-              monthly[monthKey].stats[statType] += value;
-            }
-          });
-        }
+        // Process each stat type using the helper function
+        Object.keys(monthly[monthKey].stats).forEach(statType => {
+          const points = extractTaskPoints(task, statType);
+          if (points !== 0 && monthly[monthKey].stats[statType] !== undefined) {
+            monthly[monthKey].stats[statType] += points;
+          }
+        });
       }
     });
     

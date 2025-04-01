@@ -83,8 +83,26 @@ const ProgressReports = ({ showTitle = false }) => {
         };
       })
       .sort((a, b) => {
-        // Sort by key descending (newest first)
-        return b.key.localeCompare(a.key);
+        // Parse and sort by week numbers for correct chronological order
+        if (timeframe === 'weekly') {
+          // Extract week numbers from week keys (YYYY-Www format)
+          const [yearA, weekNumA] = a.key.split('-W').map(part => parseInt(part));
+          const [yearB, weekNumB] = b.key.split('-W').map(part => parseInt(part));
+          
+          // Compare years first
+          if (yearA !== yearB) return yearA - yearB;
+          // Then compare week numbers
+          return weekNumA - weekNumB;
+        } else {
+          // For monthly data, sort by year and month numbers
+          const [yearA, monthA] = a.key.split('-').map(part => parseInt(part));
+          const [yearB, monthB] = b.key.split('-').map(part => parseInt(part));
+          
+          // Compare years first
+          if (yearA !== yearB) return yearA - yearB;
+          // Then compare month numbers
+          return monthA - monthB;
+        }
       });
   };
   
@@ -93,15 +111,15 @@ const ProgressReports = ({ showTitle = false }) => {
     const chartData = getChartData();
     if (chartData.length === 0) return [];
     
-    // Get the most recent period
-    const latestPeriod = chartData[0];
+    // Get the most recent period (now the last item in the array)
+    const latestPeriod = chartData[chartData.length - 1];
     
     // Format data for radar chart
     return Object.keys(rawStats).map(stat => ({
       subject: stat,
       current: latestPeriod[stat] || 0,
       // If there's a previous period, include that too
-      previous: chartData.length > 1 ? (chartData[1][stat] || 0) : 0,
+      previous: chartData.length > 1 ? (chartData[chartData.length - 2][stat] || 0) : 0,
     }));
   };
   
@@ -290,8 +308,9 @@ const ProgressReports = ({ showTitle = false }) => {
     const data = getChartData();
     if (data.length < 2) return null;
     
-    const current = data[0];
-    const previous = data[1];
+    // Get the most recent periods (now last items in the sorted array)
+    const current = data[data.length - 1];
+    const previous = data[data.length - 2];
     
     // Calculate overall progress metrics
     const taskDiff = current.tasks - previous.tasks;
