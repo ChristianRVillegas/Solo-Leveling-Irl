@@ -10,36 +10,27 @@ import { createUserProfile, getUserProfile, updateUserProfile } from './firestor
  */
 export const uploadProfilePicture = async (imageData) => {
   try {
-    // Debug info
-    console.log("Starting profile picture upload...");
-    
     if (!auth.currentUser) {
       throw new Error("No authenticated user found");
     }
     
     const userId = auth.currentUser.uid;
-    console.log("User ID:", userId);
     
     // Upload directly to the userId path according to rules
     const imagePath = `profilePictures/${userId}`;
     const imageRef = ref(storage, imagePath);
     
-    console.log("Uploading to path:", imagePath);
-    
     // Upload the image data
     const snapshot = await uploadString(imageRef, imageData, 'data_url');
-    console.log("Upload complete, getting download URL...");
     
     // Get download URL
     const downloadURL = await getDownloadURL(snapshot.ref);
-    console.log("Download URL obtained:", downloadURL);
     
     // Update Firebase Auth user profile
     try {
       await updateProfile(auth.currentUser, {
         photoURL: downloadURL
       });
-      console.log("Firebase Auth profile updated with new photo URL");
     } catch (authError) {
       console.error("Error updating Firebase Auth profile:", authError);
       // Continue even if auth profile update fails
@@ -50,7 +41,6 @@ export const uploadProfilePicture = async (imageData) => {
       await updateUserProfile(userId, {
         profilePicture: downloadURL
       });
-      console.log("Firestore user profile updated with new photo URL");
     } catch (firestoreError) {
       console.error("Error updating Firestore profile:", firestoreError);
       // Continue even if Firestore update fails
@@ -66,9 +56,6 @@ export const uploadProfilePicture = async (imageData) => {
 // Test function to verify storage is working
 export const testStorageConnection = async () => {
   try {
-    console.log("Testing Firebase Storage connection...");
-    console.log("Storage object:", storage);
-    
     if (!auth.currentUser) {
       throw new Error("No authenticated user found");
     }
@@ -80,7 +67,7 @@ export const testStorageConnection = async () => {
     await uploadString(testRef, testString);
     const downloadURL = await getDownloadURL(testRef);
     
-    return "Storage connection successful! URL: " + downloadURL;
+    return "Storage connection successful!";
   } catch (error) {
     console.error("Error testing storage connection:", error);
     throw error;
